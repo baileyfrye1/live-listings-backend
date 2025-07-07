@@ -43,7 +43,16 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
+	connStr := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
+		username,
+		password,
+		host,
+		port,
+		database,
+		schema,
+	)
+	fmt.Println(connStr)
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)

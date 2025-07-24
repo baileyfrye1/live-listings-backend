@@ -3,19 +3,24 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	"server/internal/server/middleware"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	authMiddleware := middleware.Authenticate(s.session, s.userRepo)
+	authorizeMiddleware := middleware.Authorize(s.session, s.userRepo)
+
+	r.Use(cm.Logger)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -25,10 +30,34 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/listings", s.GetListings)
-	r.Post("/listings", s.CreateListing)
+	// Public routes
+	r.Group(func(r chi.Router) {
+		r.Get("/listings", s.GetListings)
+		r.Get("/listings/{id}", s.GetListings)
 
-	r.Get("/health", s.healthHandler)
+		// Authentication routes
+		r.Route("/users", func(u chi.Router) {
+			u.Get("/agents", s.userHandler.GetAllAgents)
+			u.Post("/signup", s.authHandler.Register)
+			u.Post("/login", s.authHandler.Login)
+		})
+
+		r.Get("/health", s.healthHandler)
+	})
+
+	// Authenticated routes
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware)
+
+		r.Get("/users/profile", s.userHandler.GetUserById)
+		r.Patch("/users/profile", s.userHandler.UpdateUserById)
+		r.Post("/listings", s.CreateListing)
+	})
+
+	// Agent routes
+	r.Group(func(r chi.Router) {
+		r.Use(authorizeMiddleware)
+	})
 
 	r.Get("/websocket", s.websocketHandler)
 
@@ -41,13 +70,15 @@ func (s *Server) GetListings(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
+		slog.Error("error handling JSON marshal", slog.String("error", err.Error()))
 	}
 
 	_, _ = w.Write(jsonResp)
 }
 
 func (s *Server) CreateListing(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserContextKey).(int)
+	fmt.Fprintln(w, userID)
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +89,7 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 	socket, err := websocket.Accept(w, r, nil)
 	if err != nil {
-		log.Printf("could not open websocket: %v", err)
+		slog.Error("could not open websocket", slog.String("error", err.Error()))
 		_, _ = w.Write([]byte("could not open websocket"))
 		w.WriteHeader(http.StatusInternalServerError)
 		return

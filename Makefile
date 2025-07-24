@@ -1,4 +1,5 @@
 # Simple Makefile for a Go project
+include .env
 
 # Build the application
 all: build test
@@ -7,7 +8,7 @@ build:
 	@echo "Building..."
 	
 	
-	@go build -o main cmd/api/main.go
+	@go build -o bin/main cmd/api/main.go
 
 # Run the application
 run:
@@ -30,6 +31,13 @@ docker-down:
 		docker-compose down; \
 	fi
 
+# Run database migration
+up:
+	@goose -dir=database/migrations postgres postgresql://$(BLUEPRINT_DB_USERNAME):$(BLUEPRINT_DB_PASSWORD)@$(BLUEPRINT_DB_HOST):$(BLUEPRINT_DB_PORT)/$(BLUEPRINT_DB_DATABASE) up
+
+down:
+	@goose -dir=database/migrations postgres postgresql://$(BLUEPRINT_DB_USERNAME):$(BLUEPRINT_DB_PASSWORD)@$(BLUEPRINT_DB_HOST):$(BLUEPRINT_DB_PORT)/$(BLUEPRINT_DB_DATABASE) down
+
 # Test the application
 test:
 	@echo "Testing..."
@@ -45,9 +53,10 @@ clean:
 	@rm -f main
 
 # Live Reload
-watch:
+dev:
+
 	@if command -v air > /dev/null; then \
-            air; \
+            air --build.cmd "go build -o bin/main cmd/api/main.go" --build.bin "./bin/main"; \
             echo "Watching...";\
         else \
             read -p "Go's 'air' is not installed on your machine. Do you want to install it? [Y/n] " choice; \

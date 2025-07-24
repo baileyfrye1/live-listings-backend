@@ -3,8 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
-
+	"server/internal/api/dto"
 	"server/internal/domain"
 	"server/internal/repo"
 )
@@ -14,12 +13,23 @@ type UserService struct {
 }
 
 func NewUserService(userRepo *repo.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+	return &UserService{
+		userRepo: userRepo,
+	}
 }
 
-func (s *UserService) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (s *UserService) GetUserById(ctx context.Context, id int) (*domain.User, error) {
 	return s.userRepo.GetByUserId(ctx, id)
 }
 
-func (s *UserService) CreateUser(ctx context.Context) {
+func (s *UserService) GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error) {
+	return s.userRepo.GetUsersByRole(ctx, role)
+}
+
+func (s *UserService) UpdateUserById(
+	ctx context.Context,
+	user *dto.RequestUpdateUser,
+	id int,
+) (*domain.User, error) {
+	return s.userRepo.UpdateUserById(ctx, user, id)
 }

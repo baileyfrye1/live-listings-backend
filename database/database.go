@@ -22,6 +22,8 @@ type Service interface {
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
 	Close() error
+
+	DB() *sql.DB
 }
 
 type service struct {
@@ -29,12 +31,12 @@ type service struct {
 }
 
 var (
-	database   = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password   = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username   = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port       = os.Getenv("BLUEPRINT_DB_PORT")
-	host       = os.Getenv("BLUEPRINT_DB_HOST")
-	schema     = os.Getenv("BLUEPRINT_DB_SCHEMA")
+	database   = os.Getenv("DB_DATABASE")
+	password   = os.Getenv("DB_PASSWORD")
+	username   = os.Getenv("DB_USERNAME")
+	port       = os.Getenv("DB_PORT")
+	host       = os.Getenv("DB_HOST")
+	schema     = os.Getenv("DB_SCHEMA")
 	dbInstance *service
 )
 
@@ -120,4 +122,8 @@ func (s *service) Health() map[string]string {
 func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", database)
 	return s.db.Close()
+}
+
+func (s *service) DB() *sql.DB {
+	return s.db
 }

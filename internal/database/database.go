@@ -52,7 +52,6 @@ func New() Service {
 		database,
 		schema,
 	)
-	fmt.Println(connStr)
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)

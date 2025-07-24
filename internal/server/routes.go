@@ -25,7 +25,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/", s.HelloWorldHandler)
+	r.Get("/listings", s.GetListings)
+	r.Post("/listings", s.CreateListing)
 
 	r.Get("/health", s.healthHandler)
 
@@ -34,7 +35,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	return r
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetListings(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
 
@@ -44,6 +45,9 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _ = w.Write(jsonResp)
+}
+
+func (s *Server) CreateListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"server/internal/api/dto"
 	"server/internal/domain"
 )
 
@@ -54,11 +55,61 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 	return listings, nil
 }
 
+func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
+	query := `
+		SELECT * FROM listings
+		WHERE id = $1
+		INNER JOIN users
+			ON listings.agent_id = users.id
+	`
+
+	var listing domain.Listing
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&listing.ID,
+		&listing.Address,
+		&listing.Price,
+		&listing.Beds,
+		&listing.Baths,
+		&listing.SqFt,
+		&listing.AgentID,
+		&listing.CreatedAt,
+		&listing.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &listing, nil
+}
+
 func (r *ListingRepository) CreateListing(
 	ctx context.Context,
-	listing *domain.Listing,
+	listing *dto.RequestCreateListing,
 ) (*domain.Listing, error) {
-	query := ``
+	query := `
+		INSERT INTO listings
+		(address, price, beds, baths, sq_ft, agent_id)
+		VALUES($1, $2, $3, $4, $5, $6)
+		RETURNING *
+	`
 
-	return nil, nil
+	var newListing domain.Listing
+
+	err := r.db.QueryRowContext(ctx, query).Scan(
+		&newListing.ID,
+		&newListing.Address,
+		&newListing.Price,
+		&newListing.Beds,
+		&newListing.Baths,
+		&newListing.SqFt,
+		&newListing.AgentID,
+		&newListing.CreatedAt,
+		&newListing.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &newListing, nil
 }

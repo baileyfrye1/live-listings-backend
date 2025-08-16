@@ -53,6 +53,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Invalid email or password")
+		return
 	}
 
 	user, err := h.authService.Login(r.Context(), &req)

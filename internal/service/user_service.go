@@ -19,7 +19,7 @@ func NewUserService(userRepo *repo.UserRepository) *UserService {
 }
 
 func (s *UserService) GetUserById(ctx context.Context, id int) (*domain.User, error) {
-	return s.userRepo.GetByUserId(ctx, id)
+	return s.userRepo.GetUserById(ctx, id)
 }
 
 func (s *UserService) GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error) {

@@ -18,7 +18,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) GetByUserId(ctx context.Context, id int) (*domain.User, error) {
+func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User, error) {
 	query := `
 		SELECT id, first_name, last_name, email, created_at, updated_at, role
 		FROM users
@@ -37,7 +37,7 @@ func (r *UserRepository) GetByUserId(ctx context.Context, id int) (*domain.User,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, err
 		}
 		return nil, fmt.Errorf("Query user by id: %w", err)
 	}
@@ -112,6 +112,35 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 	}
 
 	return users, nil
+}
+
+func (r *UserRepository) GetAuthorizedUser(ctx context.Context, id int) (*domain.User, error) {
+	query := `
+		SELECT id, first_name, last_name, email, created_at, updated_at, role
+		FROM users
+		WHERE (role = $1 OR role = $2) AND id = $3
+	`
+
+	var user domain.User
+	err := r.db.QueryRowContext(ctx, query, "agent", "admin", id).Scan(
+		&user.ID,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Role,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("Query authorized user: %w", err)
+	}
+
+	fmt.Println(user)
+
+	return &user, nil
 }
 
 func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {

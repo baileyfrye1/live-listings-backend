@@ -57,16 +57,27 @@ func main() {
 
 	// Setup repositories
 	userRepo := repo.NewUserRepository(dbService.DB())
+	listingRepo := repo.NewListingRepository(dbService.DB())
 
 	// Setup services
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, session)
+	listingService := service.NewListingService(listingRepo)
 
 	// Setup handlers
 	userHandler := handler.NewUserHandler(userService)
 	authHandler := handler.NewAuthHandler(authService)
+	listingHandler := handler.NewListingHandler(listingService)
 
-	server := server.NewServer(dbService, session, userRepo, userHandler, authHandler)
+	server := server.NewServer(
+		dbService,
+		session,
+		userRepo,
+		listingRepo,
+		userHandler,
+		authHandler,
+		listingHandler,
+	)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)

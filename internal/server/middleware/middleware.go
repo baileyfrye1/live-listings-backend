@@ -39,7 +39,7 @@ func Authenticate(
 				return
 			}
 
-			_, err = userRepo.GetByUserId(ctx, sessionData.UserID)
+			_, err = userRepo.GetUserById(ctx, sessionData.UserID)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -57,6 +57,34 @@ func Authorize(
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			cookie, err := r.Cookie("session")
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			sessionID, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			sessionData, err := session.GetSession(ctx, sessionID)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			_, err = userRepo.GetAuthorizedUser(ctx, sessionData.UserID)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			userCtx := context.WithValue(ctx, UserContextKey, sessionData.UserID)
+			next.ServeHTTP(w, r.WithContext(userCtx))
 		})
 	}
 }

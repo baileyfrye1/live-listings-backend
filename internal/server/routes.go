@@ -32,8 +32,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Public routes
 	r.Group(func(r chi.Router) {
-		r.Get("/listings", s.GetListings)
-		r.Get("/listings/{id}", s.GetListings)
+		r.Get("/listings", s.listingHandler.GetAllListings)
+		r.Get("/listings/{listingId}", s.listingHandler.GetListingById)
 
 		// Authentication routes
 		r.Route("/users", func(u chi.Router) {
@@ -51,34 +51,18 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 		r.Get("/users/profile", s.userHandler.GetUserById)
 		r.Patch("/users/profile", s.userHandler.UpdateUserById)
-		r.Post("/listings", s.CreateListing)
 	})
 
-	// Agent routes
+	// Agent/admin routes
 	r.Group(func(r chi.Router) {
 		r.Use(authorizeMiddleware)
+
+		r.Post("/listings", s.listingHandler.CreateListing)
 	})
 
 	r.Get("/websocket", s.websocketHandler)
 
 	return r
-}
-
-func (s *Server) GetListings(w http.ResponseWriter, r *http.Request) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
-
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		slog.Error("error handling JSON marshal", slog.String("error", err.Error()))
-	}
-
-	_, _ = w.Write(jsonResp)
-}
-
-func (s *Server) CreateListing(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserContextKey).(int)
-	fmt.Fprintln(w, userID)
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {

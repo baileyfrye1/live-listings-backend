@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"server/internal/api/dto"
 	"server/internal/domain"
 	"server/internal/repo"
 )
@@ -17,4 +18,15 @@ func NewListingService(listingRepo *repo.ListingRepository) *ListingService {
 
 func (s *ListingService) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
 	return s.listingRepo.GetAllListings(ctx)
+}
+
+func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
+	return s.listingRepo.GetListingById(ctx, id)
+}
+
+func (s *ListingService) CreateListing(
+	ctx context.Context,
+	listing *dto.RequestCreateListing,
+) (*domain.Listing, error) {
+	return s.listingRepo.CreateListing(ctx, listing)
 }

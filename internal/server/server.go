@@ -18,28 +18,34 @@ import (
 type Server struct {
 	port int
 
-	db          database.Service
-	session     *session.Session
-	userRepo    *repo.UserRepository
-	userHandler *handler.UserHandler
-	authHandler *handler.AuthHandler
+	db             database.Service
+	session        *session.Session
+	userRepo       *repo.UserRepository
+	listingRepo    *repo.ListingRepository
+	userHandler    *handler.UserHandler
+	authHandler    *handler.AuthHandler
+	listingHandler *handler.ListingHandler
 }
 
 func NewServer(
 	db database.Service,
 	session *session.Session,
 	userRepo *repo.UserRepository,
+	listingRepo *repo.ListingRepository,
 	userHandler *handler.UserHandler,
 	authHandler *handler.AuthHandler,
+	listingHandler *handler.ListingHandler,
 ) *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
-		port:        port,
-		db:          db,
-		session:     session,
-		userRepo:    userRepo,
-		userHandler: userHandler,
-		authHandler: authHandler,
+		port:           port,
+		db:             db,
+		session:        session,
+		userRepo:       userRepo,
+		listingRepo:    listingRepo,
+		userHandler:    userHandler,
+		authHandler:    authHandler,
+		listingHandler: listingHandler,
 	}
 
 	// Declare Server config

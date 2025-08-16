@@ -30,7 +30,7 @@ func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSON(w, http.StatusOK, agents)
 }
 
-func (h *UserHandler) GetUserById(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	userId := r.Context().Value(middleware.UserContextKey).(int)
 
 	user, err := h.userService.GetUserById(r.Context(), userId)

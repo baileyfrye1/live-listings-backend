@@ -11,7 +11,10 @@ import (
 
 type contextKey string
 
-const UserContextKey contextKey = "userID"
+const (
+	UserContextKey contextKey = "userID"
+	RoleContextKey contextKey = "role"
+)
 
 func Authenticate(
 	session *session.Session,
@@ -77,14 +80,15 @@ func Authorize(
 				return
 			}
 
-			_, err = userRepo.GetAuthorizedUser(ctx, sessionData.UserID)
+			user, err := userRepo.GetAuthorizedUser(ctx, sessionData.UserID)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
 			userCtx := context.WithValue(ctx, UserContextKey, sessionData.UserID)
-			next.ServeHTTP(w, r.WithContext(userCtx))
+			roleCtx := context.WithValue(userCtx, RoleContextKey, user.Role)
+			next.ServeHTTP(w, r.WithContext(roleCtx))
 		})
 	}
 }

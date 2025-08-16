@@ -67,7 +67,7 @@ func main() {
 	// Setup handlers
 	userHandler := handler.NewUserHandler(userService)
 	authHandler := handler.NewAuthHandler(authService)
-	listingHandler := handler.NewListingHandler(listingService)
+	listingHandler := handler.NewListingHandler(listingService, userService)
 
 	server := server.NewServer(
 		dbService,

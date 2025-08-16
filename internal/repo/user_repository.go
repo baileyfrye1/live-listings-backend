@@ -92,15 +92,16 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 		user := new(domain.User)
 
 		err := rows.Scan(
-			user.ID,
-			user.FirstName,
-			user.LastName,
-			user.Email,
-			user.CreatedAt,
-			user.UpdatedAt,
-			user.Role,
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.Role,
 		)
 		if err != nil {
+			fmt.Println("Error here")
 			return nil, err
 		}
 

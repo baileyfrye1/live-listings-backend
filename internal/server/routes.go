@@ -34,10 +34,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Get("/listings", s.listingHandler.GetAllListings)
 		r.Get("/listings/{listingId}", s.listingHandler.GetListingById)
+		r.Get("/agents", s.userHandler.GetAllAgents)
+		r.Get("/agents/{agentId}/listings", s.listingHandler.GetAgentListings)
 
-		// Authentication routes
 		r.Route("/users", func(u chi.Router) {
-			u.Get("/agents", s.userHandler.GetAllAgents)
 			u.Post("/signup", s.authHandler.Register)
 			u.Post("/login", s.authHandler.Login)
 		})
@@ -49,7 +49,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware)
 
-		r.Get("/users/profile", s.userHandler.GetUserById)
+		r.Get("/users/profile", s.userHandler.GetCurrentUser)
 		r.Patch("/users/profile", s.userHandler.UpdateUserById)
 	})
 
@@ -57,6 +57,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(authorizeMiddleware)
 
+		r.Get("/agents/me/listings", s.listingHandler.GetMyListings)
 		r.Post("/listings", s.listingHandler.CreateListing)
 	})
 

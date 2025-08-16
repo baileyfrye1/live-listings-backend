@@ -20,6 +20,13 @@ func (s *ListingService) GetAllListings(ctx context.Context) ([]*domain.Listing,
 	return s.listingRepo.GetAllListings(ctx)
 }
 
+func (s *ListingService) GetListingsByAgentId(
+	ctx context.Context,
+	agentId int,
+) ([]*domain.Listing, error) {
+	return s.listingRepo.GetListingsByAgentId(ctx, agentId)
+}
+
 func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
 	return s.listingRepo.GetListingById(ctx, id)
 }

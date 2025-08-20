@@ -33,7 +33,24 @@ func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Li
 
 func (s *ListingService) CreateListing(
 	ctx context.Context,
-	listing *dto.RequestCreateListing,
+	listing *dto.CreateListingRequest,
 ) (*domain.Listing, error) {
 	return s.listingRepo.CreateListing(ctx, listing)
+}
+
+func (s *ListingService) UpdateListingById(
+	ctx context.Context,
+	listing *dto.UpdateListingRequest,
+	currentAgentId int,
+	listingId int,
+) (*domain.Listing, error) {
+	return s.listingRepo.UpdateListingById(ctx, listing, currentAgentId, listingId)
+}
+
+func (s *ListingService) DeleteListingById(
+	ctx context.Context,
+	currentAgentId int,
+	listingId int,
+) error {
+	return s.listingRepo.DeleteListingById(ctx, currentAgentId, listingId)
 }

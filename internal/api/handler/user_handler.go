@@ -3,8 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"server/internal/api/dto"
+	"server/internal/domain"
 	"server/internal/server/middleware"
 	"server/internal/service"
 	"server/util"
@@ -30,10 +34,26 @@ func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 	util.WriteJSON(w, http.StatusOK, agents)
 }
 
-func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
-	userId := r.Context().Value(middleware.UserContextKey).(int)
+func (h *UserHandler) GetAgentById(w http.ResponseWriter, r *http.Request) {
+	agentId, err := strconv.Atoi(chi.URLParam(r, "agentId"))
+	if err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, "Could not find agent with that ID")
+		return
+	}
 
-	user, err := h.userService.GetUserById(r.Context(), userId)
+	agent, err := h.userService.GetAgentById(r.Context(), agentId)
+	if err != nil {
+		util.RespondWithError(w, http.StatusInternalServerError, "Error fetching agent")
+		return
+	}
+
+	util.WriteJSON(w, http.StatusOK, agent)
+}
+
+func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+
+	user, err := h.userService.GetUserById(r.Context(), userCtx.UserID)
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Could not find user")
 		return
@@ -43,15 +63,15 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
-	userId := r.Context().Value(middleware.UserContextKey).(int)
-	var req dto.RequestUpdateUser
+	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	var req dto.UpdateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return
 	}
 
-	user, err := h.userService.UpdateUserById(r.Context(), &req, userId)
+	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx.UserID)
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Could not find user")
 		return

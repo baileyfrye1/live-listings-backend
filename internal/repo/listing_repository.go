@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
@@ -38,7 +39,7 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 	var listings []*domain.Listing
 	for rows.Next() {
 		listing := new(domain.Listing)
-		listing.Agent = new(domain.ListingAgent)
+		listing.Agent = new(domain.Agent)
 
 		err := rows.Scan(
 			&listing.ID,
@@ -84,7 +85,7 @@ func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain
 	`
 
 	var listing domain.Listing
-	listing.Agent = new(domain.ListingAgent)
+	listing.Agent = new(domain.Agent)
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&listing.ID,
@@ -156,7 +157,7 @@ func (r *ListingRepository) GetListingsByAgentId(
 
 func (r *ListingRepository) CreateListing(
 	ctx context.Context,
-	listing *dto.RequestCreateListing,
+	listing *dto.CreateListingRequest,
 ) (*domain.Listing, error) {
 	query := `
 		WITH new_listing AS (
@@ -171,7 +172,7 @@ func (r *ListingRepository) CreateListing(
 	`
 
 	var newListing domain.Listing
-	newListing.Agent = new(domain.ListingAgent)
+	newListing.Agent = new(domain.Agent)
 
 	err := r.db.QueryRowContext(ctx, query, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
 		Scan(
@@ -195,4 +196,93 @@ func (r *ListingRepository) CreateListing(
 	}
 
 	return &newListing, nil
+}
+
+func (r *ListingRepository) UpdateListingById(
+	ctx context.Context,
+	listing *dto.UpdateListingRequest,
+	currentAgentId int,
+	listingId int,
+) (*domain.Listing, error) {
+	// Update query to allow admins to update any listing
+	query := `
+		UPDATE listings
+		SET address = COALESCE($1, address),
+			price = COALESCE($2, price),
+			beds = COALESCE($3, beds),
+			baths = COALESCE($4, baths),
+			sq_ft = COALESCE($5, sq_ft),
+			description = COALESCE($6, description),
+			agent_id = COALESCE($7, agent_id),
+			updated_at = NOW()
+		WHERE id = $8 AND agent_id = $9
+		RETURNING *
+	`
+
+	var updatedListing domain.Listing
+
+	err := r.db.QueryRowContext(
+		ctx,
+		query,
+		listing.Address,
+		listing.Price,
+		listing.Beds,
+		listing.Baths,
+		listing.SqFt,
+		listing.Description,
+		listing.AgentID,
+		listingId,
+		currentAgentId,
+	).Scan(
+		&updatedListing.ID,
+		&updatedListing.Address,
+		&updatedListing.Price,
+		&updatedListing.Beds,
+		&updatedListing.Baths,
+		&updatedListing.SqFt,
+		&updatedListing.Description,
+		&updatedListing.AgentID,
+		&updatedListing.CreatedAt,
+		&updatedListing.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("Listing not found or you do not have permission")
+		}
+		return nil, err
+	}
+	return &updatedListing, err
+}
+
+func (r *ListingRepository) DeleteListingById(
+	ctx context.Context,
+	currentAgentId int,
+	listingId int,
+) error {
+	// Update query to allow admins to delete any listing
+	query := `
+		DELETE FROM listings
+		WHERE id = $1 AND agent_id = $2
+	`
+
+	result, err := r.db.ExecContext(
+		ctx,
+		query,
+		listingId,
+		currentAgentId,
+	)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		return errors.New("Cannot delete other agent's listing")
+	}
+
+	return nil
 }

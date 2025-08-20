@@ -45,6 +45,32 @@ func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User,
 	return &user, nil
 }
 
+func (r *UserRepository) GetAgentById(ctx context.Context, id int) (*domain.Agent, error) {
+	query := `
+		SELECT id, first_name, last_name, email, created_at, updated_at, role
+		FROM users
+		WHERE id = $1 AND role = "agent"
+	`
+	var agent domain.Agent
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&agent.ID,
+		&agent.FirstName,
+		&agent.LastName,
+		&agent.Email,
+		&agent.CreatedAt,
+		&agent.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("Query user by id: %w", err)
+	}
+
+	return &agent, nil
+}
+
 func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
 		SELECT * FROM users
@@ -101,7 +127,6 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 			&user.Role,
 		)
 		if err != nil {
-			fmt.Println("Error here")
 			return nil, err
 		}
 
@@ -113,35 +138,6 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 	}
 
 	return users, nil
-}
-
-func (r *UserRepository) GetAuthorizedUser(ctx context.Context, id int) (*domain.User, error) {
-	query := `
-		SELECT id, first_name, last_name, email, created_at, updated_at, role
-		FROM users
-		WHERE (role = $1 OR role = $2) AND id = $3
-	`
-
-	var user domain.User
-	err := r.db.QueryRowContext(ctx, query, "agent", "admin", id).Scan(
-		&user.ID,
-		&user.FirstName,
-		&user.LastName,
-		&user.Email,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.Role,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, err
-		}
-		return nil, fmt.Errorf("Query authorized user: %w", err)
-	}
-
-	fmt.Println(user)
-
-	return &user, nil
 }
 
 func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
@@ -164,7 +160,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) (*do
 
 func (r *UserRepository) UpdateUserById(
 	ctx context.Context,
-	user *dto.RequestUpdateUser,
+	user *dto.UpdateUserRequest,
 	id int,
 ) (*domain.User, error) {
 	query := `

@@ -1,6 +1,6 @@
 package dto
 
-type RequestCreateUser struct {
+type CreateUserRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
@@ -8,19 +8,19 @@ type RequestCreateUser struct {
 	Password  string `json:"password"`
 }
 
-type RequestUpdateUser struct {
+type UpdateUserRequest struct {
 	FirstName *string `json:"first_name"`
 	LastName  *string `json:"last_name"`
 	Email     *string `json:"email"`
 	Role      *string `json:"role"`
 }
 
-type RequestLoginUser struct {
+type LoginUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type ResponseLoginUser struct {
+type LoginUserResponse struct {
 	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`

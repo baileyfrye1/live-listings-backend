@@ -36,9 +36,9 @@ func (h *ListingHandler) GetAllListings(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ListingHandler) GetMyListings(w http.ResponseWriter, r *http.Request) {
-	currentAgentId := r.Context().Value(middleware.UserContextKey).(int)
+	currentAgentCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
 
-	listings, err := h.listingService.GetListingsByAgentId(r.Context(), currentAgentId)
+	listings, err := h.listingService.GetListingsByAgentId(r.Context(), currentAgentCtx.UserID)
 	if err != nil {
 		util.RespondWithError(
 			w,
@@ -108,16 +108,15 @@ func (h *ListingHandler) GetListingById(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ListingHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
-	userRole := r.Context().Value(middleware.RoleContextKey).(string)
-	userId := r.Context().Value(middleware.UserContextKey).(int)
-	var req dto.RequestCreateListing
+	agentCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	var req dto.CreateListingRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Please enter all fields")
 		return
 	}
 
-	if (userRole == "agent") && req.AgentID != nil {
+	if (agentCtx.Role == "agent") && req.AgentID != nil {
 		util.RespondWithError(
 			w,
 			http.StatusBadRequest,
@@ -127,7 +126,7 @@ func (h *ListingHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.AgentID == nil {
-		req.AgentID = &userId
+		req.AgentID = &agentCtx.UserID
 	}
 
 	listing, err := h.listingService.CreateListing(r.Context(), &req)
@@ -137,4 +136,58 @@ func (h *ListingHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	util.WriteJSON(w, http.StatusOK, listing)
+}
+
+func (h *ListingHandler) UpdateMyListing(w http.ResponseWriter, r *http.Request) {
+	currentAgentCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
+	if err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, "No listing exists with that ID")
+	}
+
+	var req dto.UpdateListingRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, "Please enter a field to update")
+		return
+	}
+
+	if (currentAgentCtx.Role == "agent") && req.AgentID != nil {
+		util.RespondWithError(
+			w,
+			http.StatusBadRequest,
+			"Cannot update agent on listing. Please contact admin to change agent",
+		)
+		return
+	}
+
+	listing, err := h.listingService.UpdateListingById(
+		r.Context(),
+		&req,
+		currentAgentCtx.UserID,
+		listingId,
+	)
+	if err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	util.WriteJSON(w, http.StatusOK, listing)
+}
+
+func (h *ListingHandler) DeleteMyListing(w http.ResponseWriter, r *http.Request) {
+	currentAgentId := r.Context().Value(middleware.UserContextKey).(int)
+	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
+	if err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, "No listing exists with that ID")
+		return
+	}
+
+	err = h.listingService.DeleteListingById(r.Context(), currentAgentId, listingId)
+	if err != nil {
+		util.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	util.WriteJSON(w, http.StatusOK, map[string]string{"message": "Successfully deleted"})
 }

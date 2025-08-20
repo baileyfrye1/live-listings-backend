@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -47,4 +48,17 @@ func (s *Session) SetSession(
 	}
 
 	return s.rc.Set(ctx, sessionID, data, ttl).Err()
+}
+
+func (s *Session) DeleteSession(ctx context.Context, sessionID string) error {
+	count, err := s.rc.Del(ctx, sessionID).Result()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return errors.New("Session not found")
+	}
+
+	return nil
 }

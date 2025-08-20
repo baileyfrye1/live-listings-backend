@@ -35,14 +35,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Get("/listings", s.listingHandler.GetAllListings)
 		r.Get("/listings/{listingId}", s.listingHandler.GetListingById)
 		r.Get("/agents", s.userHandler.GetAllAgents)
+		r.Get("/agents/{agentId}", s.userHandler.GetAgentById)
 		r.Get("/agents/{agentId}/listings", s.listingHandler.GetAgentListings)
 
-		r.Route("/users", func(u chi.Router) {
-			u.Post("/signup", s.authHandler.Register)
+		r.Route("/auth", func(u chi.Router) {
+			u.Post("/register", s.authHandler.Register)
 			u.Post("/login", s.authHandler.Login)
 		})
-
-		r.Get("/health", s.healthHandler)
 	})
 
 	// Authenticated routes
@@ -51,17 +50,21 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 		r.Get("/users/profile", s.userHandler.GetCurrentUser)
 		r.Patch("/users/profile", s.userHandler.UpdateUserById)
-	})
+		r.Post("/auth/logout", s.authHandler.Logout)
 
-	// Agent/admin routes
-	r.Group(func(r chi.Router) {
-		r.Use(authorizeMiddleware)
+		// Agent/admin routes
+		r.Group(func(r chi.Router) {
+			r.Use(authorizeMiddleware)
 
-		r.Get("/agents/me/listings", s.listingHandler.GetMyListings)
-		r.Post("/listings", s.listingHandler.CreateListing)
+			r.Get("/agents/me/listings", s.listingHandler.GetMyListings)
+			r.Post("/listings", s.listingHandler.CreateListing)
+			r.Patch("/listings/{listingId}", s.listingHandler.UpdateMyListing)
+			r.Delete("/listings/{listingId}", s.listingHandler.DeleteMyListing)
+		})
 	})
 
 	r.Get("/websocket", s.websocketHandler)
+	r.Get("/health", s.healthHandler)
 
 	return r
 }

@@ -22,13 +22,17 @@ func (s *UserService) GetUserById(ctx context.Context, id int) (*domain.User, er
 	return s.userRepo.GetUserById(ctx, id)
 }
 
+func (s *UserService) GetAgentById(ctx context.Context, id int) (*domain.Agent, error) {
+	return s.userRepo.GetAgentById(ctx, id)
+}
+
 func (s *UserService) GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error) {
 	return s.userRepo.GetUsersByRole(ctx, role)
 }
 
 func (s *UserService) UpdateUserById(
 	ctx context.Context,
-	user *dto.RequestUpdateUser,
+	user *dto.UpdateUserRequest,
 	id int,
 ) (*domain.User, error) {
 	return s.userRepo.UpdateUserById(ctx, user, id)

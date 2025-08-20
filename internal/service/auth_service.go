@@ -24,8 +24,8 @@ func NewAuthService(userRepo *repo.UserRepository, session *session.Session) *Au
 
 func (s *AuthService) Register(
 	ctx context.Context,
-	req *dto.RequestCreateUser,
-) (*dto.ResponseLoginUser, error) {
+	req *dto.CreateUserRequest,
+) (*dto.LoginUserResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -56,7 +56,7 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	return &dto.ResponseLoginUser{
+	return &dto.LoginUserResponse{
 		ID:        newUser.ID,
 		FirstName: newUser.FirstName,
 		LastName:  newUser.LastName,
@@ -68,8 +68,8 @@ func (s *AuthService) Register(
 
 func (s *AuthService) Login(
 	ctx context.Context,
-	req *dto.RequestLoginUser,
-) (*dto.ResponseLoginUser, error) {
+	req *dto.LoginUserRequest,
+) (*dto.LoginUserResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -87,7 +87,7 @@ func (s *AuthService) Login(
 		return nil, err
 	}
 
-	return &dto.ResponseLoginUser{
+	return &dto.LoginUserResponse{
 		ID:        user.ID,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -95,4 +95,8 @@ func (s *AuthService) Login(
 		Role:      user.Role,
 		SessionID: sessionId,
 	}, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, sessionId string) error {
+	return s.session.DeleteSession(ctx, sessionId)
 }

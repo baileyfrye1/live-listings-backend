@@ -201,23 +201,26 @@ func (r *ListingRepository) CreateListing(
 func (r *ListingRepository) UpdateListingById(
 	ctx context.Context,
 	listing *dto.UpdateListingRequest,
-	currentAgentId int,
+	currentUserCtx *domain.ContextSessionData,
 	listingId int,
 ) (*domain.Listing, error) {
-	// Update query to allow admins to update any listing
 	query := `
-		UPDATE listings
-		SET address = COALESCE($1, address),
-			price = COALESCE($2, price),
-			beds = COALESCE($3, beds),
-			baths = COALESCE($4, baths),
-			sq_ft = COALESCE($5, sq_ft),
-			description = COALESCE($6, description),
-			agent_id = COALESCE($7, agent_id),
-			updated_at = NOW()
-		WHERE id = $8 AND agent_id = $9
-		RETURNING *
-	`
+			UPDATE listings
+			SET address = COALESCE($1, address),
+				price = COALESCE($2, price),
+				beds = COALESCE($3, beds),
+				baths = COALESCE($4, baths),
+				sq_ft = COALESCE($5, sq_ft),
+				description = COALESCE($6, description),
+				agent_id = COALESCE($7, agent_id),
+				updated_at = NOW()
+			WHERE id = $8 AND 
+			(
+				agent_id = $9
+				OR $10 = 'admin'
+			)
+			RETURNING *
+		`
 
 	var updatedListing domain.Listing
 
@@ -232,7 +235,8 @@ func (r *ListingRepository) UpdateListingById(
 		listing.Description,
 		listing.AgentID,
 		listingId,
-		currentAgentId,
+		currentUserCtx.UserID,
+		currentUserCtx.Role,
 	).Scan(
 		&updatedListing.ID,
 		&updatedListing.Address,
@@ -256,20 +260,24 @@ func (r *ListingRepository) UpdateListingById(
 
 func (r *ListingRepository) DeleteListingById(
 	ctx context.Context,
-	currentAgentId int,
+	currentUserCtx *domain.ContextSessionData,
 	listingId int,
 ) error {
-	// Update query to allow admins to delete any listing
 	query := `
 		DELETE FROM listings
-		WHERE id = $1 AND agent_id = $2
+		WHERE id = $1 AND 
+		(
+			agent_id = $2
+			OR $3 = 'admin'
+		)
 	`
 
 	result, err := r.db.ExecContext(
 		ctx,
 		query,
 		listingId,
-		currentAgentId,
+		currentUserCtx.UserID,
+		currentUserCtx.Role,
 	)
 	if err != nil {
 		return err

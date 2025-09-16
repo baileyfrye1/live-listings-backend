@@ -18,7 +18,7 @@ import (
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	authMiddleware := middleware.Authenticate(s.session, s.userRepo)
-	authorizeMiddleware := middleware.Authorize(s.session, s.userRepo)
+	authorizeMiddleware := middleware.Authorize()
 
 	r.Use(cm.Logger)
 

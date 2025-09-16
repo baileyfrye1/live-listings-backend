@@ -37,13 +37,21 @@ func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetAgentById(w http.ResponseWriter, r *http.Request) {
 	agentId, err := strconv.Atoi(chi.URLParam(r, "agentId"))
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "Could not find agent with that ID")
+		util.RespondWithError(
+			w,
+			http.StatusBadRequest,
+			"Incorrect ID provided. Please provide a valid ID",
+		)
 		return
 	}
 
 	agent, err := h.userService.GetAgentById(r.Context(), agentId)
 	if err != nil {
-		util.RespondWithError(w, http.StatusInternalServerError, "Error fetching agent")
+		util.RespondWithError(
+			w,
+			http.StatusInternalServerError,
+			"Agent could not be found with that ID",
+		)
 		return
 	}
 
@@ -73,7 +81,7 @@ func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx.UserID)
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "Could not find user")
+		util.RespondWithError(w, http.StatusBadRequest, "Error updating user")
 		return
 	}
 

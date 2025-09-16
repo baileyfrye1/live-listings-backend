@@ -47,9 +47,9 @@ func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User,
 
 func (r *UserRepository) GetAgentById(ctx context.Context, id int) (*domain.Agent, error) {
 	query := `
-		SELECT id, first_name, last_name, email, created_at, updated_at, role
+		SELECT id, first_name, last_name, email, created_at, updated_at
 		FROM users
-		WHERE id = $1 AND role = "agent"
+		WHERE id = $1 AND role = 'agent'
 	`
 	var agent domain.Agent
 

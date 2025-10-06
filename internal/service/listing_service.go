@@ -41,17 +41,17 @@ func (s *ListingService) CreateListing(
 
 func (s *ListingService) UpdateListingById(
 	ctx context.Context,
-	listing *dto.UpdateListingRequest,
+	listingReq *dto.UpdateListingRequest,
 	currentUserCtx *domain.ContextSessionData,
 	listingId int,
 ) (*domain.Listing, error) {
-	if (currentUserCtx.Role == "agent") && listing.AgentID != nil {
+	if (currentUserCtx.Role == "agent") && listingReq.AgentID != nil {
 		return nil, errors.New(
 			"Cannot update agent on listing. Please contact admin to change agent",
 		)
 	}
 
-	return s.listingRepo.UpdateListingById(ctx, listing, currentUserCtx, listingId)
+	return s.listingRepo.UpdateListingById(ctx, listingReq, currentUserCtx, listingId)
 }
 
 func (s *ListingService) DeleteListingById(

@@ -79,9 +79,9 @@ func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx.UserID)
+	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx)
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "Error updating user")
+		util.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

@@ -24,6 +24,9 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 	}
 }
 
+func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+}
+
 func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 	agents, err := h.userService.GetUsersByRole(r.Context(), "agent")
 	if err != nil {

@@ -6,14 +6,14 @@ import (
 
 	"server/internal/api/dto"
 	"server/internal/domain"
-	"server/internal/repo"
+	userRepo "server/internal/repo"
 )
 
 type UserService struct {
-	userRepo *repo.UserRepository
+	userRepo userRepo.IUserRepo
 }
 
-func NewUserService(userRepo *repo.UserRepository) *UserService {
+func NewUserService(userRepo userRepo.IUserRepo) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
@@ -38,7 +38,7 @@ func (s *UserService) UpdateUserById(
 ) (*domain.User, error) {
 	if userCtx.Role != "admin" && userReq.Role != nil && *userReq.Role == "admin" {
 		return nil, errors.New(
-			"Cannot change role to admin. Please contact admin to request admin privilages",
+			"Cannot change role to admin. Please contact admin to request admin privileges",
 		)
 	}
 

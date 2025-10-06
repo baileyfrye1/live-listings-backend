@@ -2,17 +2,18 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
-	"server/internal/repo"
+	userRepo "server/internal/repo"
 )
 
 type UserService struct {
-	userRepo *repo.UserRepository
+	userRepo userRepo.IUserRepo
 }
 
-func NewUserService(userRepo *repo.UserRepository) *UserService {
+func NewUserService(userRepo userRepo.IUserRepo) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
@@ -32,8 +33,14 @@ func (s *UserService) GetUsersByRole(ctx context.Context, role string) ([]*domai
 
 func (s *UserService) UpdateUserById(
 	ctx context.Context,
-	user *dto.UpdateUserRequest,
-	id int,
+	userReq *dto.UpdateUserRequest,
+	userCtx *domain.ContextSessionData,
 ) (*domain.User, error) {
-	return s.userRepo.UpdateUserById(ctx, user, id)
+	if userCtx.Role != "admin" && userReq.Role != nil && *userReq.Role == "admin" {
+		return nil, errors.New(
+			"Cannot change role to admin. Please contact admin to request admin privileges",
+		)
+	}
+
+	return s.userRepo.UpdateUserById(ctx, userReq, userCtx.UserID)
 }

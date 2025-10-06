@@ -10,6 +10,17 @@ import (
 	"server/internal/domain"
 )
 
+type IUserRepo interface {
+	GetUserById(ctx context.Context, id int) (*domain.User, error)
+	GetAgentById(ctx context.Context, id int) (*domain.Agent, error)
+	GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error)
+	UpdateUserById(
+		ctx context.Context,
+		userReq *dto.UpdateUserRequest,
+		id int,
+	) (*domain.User, error)
+}
+
 type UserRepository struct {
 	db *sql.DB
 }

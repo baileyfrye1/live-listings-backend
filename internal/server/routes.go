@@ -60,6 +60,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 			r.Post("/listings", s.listingHandler.CreateListing)
 			r.Patch("/listings/{listingId}", s.listingHandler.UpdateMyListing)
 			r.Delete("/listings/{listingId}", s.listingHandler.DeleteMyListing)
+
+			r.Get("/users", s.userHandler.GetAllUsers)
+			r.Patch("/users/{userId}", s.userHandler.UpdateUserById)
 		})
 	})
 

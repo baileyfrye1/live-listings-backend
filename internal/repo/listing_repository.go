@@ -9,6 +9,24 @@ import (
 	"server/internal/domain"
 )
 
+type IListingRepo interface {
+	GetAllListings(ctx context.Context) ([]*domain.Listing, error)
+	GetListingById(ctx context.Context, id int) (*domain.Listing, error)
+	GetListingsByAgentId(ctx context.Context, agentId int) ([]*domain.Listing, error)
+	CreateListing(ctx context.Context, listing *dto.CreateListingRequest) (*domain.Listing, error)
+	UpdateListingById(
+		ctx context.Context,
+		listing *dto.UpdateListingRequest,
+		currentUserCtx *domain.ContextSessionData,
+		listingId int,
+	) (*domain.Listing, error)
+	DeleteListingById(
+		ctx context.Context,
+		currentUserCtx *domain.ContextSessionData,
+		listingId int,
+	) error
+}
+
 type ListingRepository struct {
 	db *sql.DB
 }

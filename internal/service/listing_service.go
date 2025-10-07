@@ -6,14 +6,14 @@ import (
 
 	"server/internal/api/dto"
 	"server/internal/domain"
-	"server/internal/repo"
+	listingRepo "server/internal/repo"
 )
 
 type ListingService struct {
-	listingRepo *repo.ListingRepository
+	listingRepo listingRepo.IListingRepo
 }
 
-func NewListingService(listingRepo *repo.ListingRepository) *ListingService {
+func NewListingService(listingRepo listingRepo.IListingRepo) *ListingService {
 	return &ListingService{listingRepo: listingRepo}
 }
 

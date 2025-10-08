@@ -14,11 +14,11 @@ import (
 )
 
 type AuthService struct {
-	userRepo *repo.UserRepository
-	session  *session.Session
+	userRepo repo.IUserRepo
+	session  session.ISession
 }
 
-func NewAuthService(userRepo *repo.UserRepository, session *session.Session) *AuthService {
+func NewAuthService(userRepo repo.IUserRepo, session session.ISession) *AuthService {
 	return &AuthService{userRepo: userRepo, session: session}
 }
 
@@ -28,6 +28,14 @@ func (s *AuthService) Register(
 ) (*dto.LoginUserResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+
+	if req == nil {
+		return nil, errors.New("Request cannot be empty")
+	}
+
+	if req.FirstName == "" || req.LastName == "" || req.Email == "" || req.Password == "" {
+		return nil, errors.New("Please enter all fields")
+	}
 
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
@@ -43,7 +51,7 @@ func (s *AuthService) Register(
 		LastName:     req.LastName,
 		Email:        req.Email,
 		Role:         req.Role,
-		PasswordHash: &hashedPassword,
+		PasswordHash: hashedPassword,
 	}
 
 	newUser, err := s.userRepo.CreateUser(ctx, u)
@@ -73,12 +81,20 @@ func (s *AuthService) Login(
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	if req == nil {
+		return nil, errors.New("Request cannot be empty")
+	}
+
+	if req.Email == "" || req.Password == "" {
+		return nil, errors.New("Please enter all fields")
+	}
+
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, errors.New("User does not exist. Please create an account")
 	}
 
-	if err = util.CompareHashedPassword(*user.PasswordHash, req.Password); err != nil {
+	if err = util.CompareHashedPassword(user.PasswordHash, req.Password); err != nil {
 		return nil, errors.New("Invalid username/password")
 	}
 

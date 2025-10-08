@@ -56,6 +56,12 @@ Run the test suite:
 make test
 ```
 
+Run test coverage:
+
+```bash
+make cover
+```
+
 Clean up binary from the last build:
 
 ```bash

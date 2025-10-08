@@ -6,23 +6,12 @@ import (
 
 	"server/internal/api/dto"
 	"server/internal/domain"
+	"server/internal/repo"
 )
-
-type userRepoMock struct {
-	UpdateUserByIdFunc func(ctx context.Context, user *dto.UpdateUserRequest, id int) (*domain.User, error)
-}
-
-func (u *userRepoMock) UpdateUserById(
-	ctx context.Context,
-	user *dto.UpdateUserRequest,
-	id int,
-) (*domain.User, error) {
-	return u.UpdateUserByIdFunc(ctx, user, id)
-}
 
 func TestUpdateUser(t *testing.T) {
 	t.Run("Agent tries to change role to admin returns error", func(t *testing.T) {
-		mockRepo := &userRepoMock{
+		mockRepo := &repo.UserRepoMock{
 			UpdateUserByIdFunc: func(ctx context.Context, user *dto.UpdateUserRequest, id int) (*domain.User, error) {
 				return &domain.User{ID: 123, Role: "agent"}, nil
 			},
@@ -49,7 +38,7 @@ func TestUpdateUser(t *testing.T) {
 	})
 
 	t.Run("User tries to change role to admin returns error", func(t *testing.T) {
-		mockRepo := &userRepoMock{
+		mockRepo := &repo.UserRepoMock{
 			UpdateUserByIdFunc: func(ctx context.Context, user *dto.UpdateUserRequest, id int) (*domain.User, error) {
 				return &domain.User{ID: 123, Role: "user"}, nil
 			},
@@ -76,7 +65,7 @@ func TestUpdateUser(t *testing.T) {
 	})
 
 	t.Run("Admin tries to change role to admin returns success", func(t *testing.T) {
-		mockRepo := &userRepoMock{
+		mockRepo := &repo.UserRepoMock{
 			UpdateUserByIdFunc: func(ctx context.Context, user *dto.UpdateUserRequest, id int) (*domain.User, error) {
 				return &domain.User{ID: 123, Role: "admin"}, nil
 			},
@@ -95,17 +84,4 @@ func TestUpdateUser(t *testing.T) {
 			t.Errorf("Expected success, received %q", err.Error())
 		}
 	})
-}
-
-// Rest of interface methods to satisfy interface requirements
-func (u *userRepoMock) GetUserById(ctx context.Context, id int) (*domain.User, error) {
-	return nil, nil
-}
-
-func (u *userRepoMock) GetAgentById(ctx context.Context, id int) (*domain.Agent, error) {
-	return nil, nil
-}
-
-func (u *userRepoMock) GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error) {
-	return nil, nil
 }

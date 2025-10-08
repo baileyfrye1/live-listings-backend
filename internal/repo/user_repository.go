@@ -13,7 +13,9 @@ import (
 type IUserRepo interface {
 	GetUserById(ctx context.Context, id int) (*domain.User, error)
 	GetAgentById(ctx context.Context, id int) (*domain.Agent, error)
+	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error)
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUserById(
 		ctx context.Context,
 		userReq *dto.UpdateUserRequest,

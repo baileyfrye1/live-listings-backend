@@ -11,6 +11,17 @@ import (
 	"server/internal/domain"
 )
 
+type ISession interface {
+	GetSession(ctx context.Context, sessionID string) (*domain.SessionData, error)
+	SetSession(
+		ctx context.Context,
+		sessionID string,
+		sessionData *domain.SessionData,
+		ttl time.Duration,
+	) error
+	DeleteSession(ctx context.Context, sessionID string) error
+}
+
 type Session struct {
 	rc *redis.Client
 }

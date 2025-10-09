@@ -9,6 +9,71 @@ import (
 	"server/internal/repo"
 )
 
+func TestGetAllUsers(t *testing.T) {
+	tests := []struct {
+		Name      string
+		UserCtx   *domain.ContextSessionData
+		ExpectErr bool
+	}{
+		{
+			Name: "Agent tries to view all users returns error",
+			UserCtx: &domain.ContextSessionData{
+				SessionID: "abc123",
+				UserID:    1,
+				Role:      "agent",
+			},
+			ExpectErr: true,
+		},
+		{
+			Name: "Admin tries to view all users returns success",
+			UserCtx: &domain.ContextSessionData{
+				SessionID: "abc123",
+				UserID:    1,
+				Role:      "admin",
+			},
+			ExpectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			mockRepo := &repo.UserRepoMock{
+				GetAllUsersFunc: func(ctx context.Context) ([]*domain.User, error) {
+					return []*domain.User{
+						{
+							ID:        1,
+							FirstName: "Bailey",
+							LastName:  "Frye",
+							Email:     "test@test.com",
+						},
+
+						{
+							ID:        2,
+							FirstName: "Arlo",
+							LastName:  "Jenkins",
+							Email:     "arlo@test.com",
+						},
+					}, nil
+				},
+			}
+
+			ctx := context.Background()
+			userCtx := tt.UserCtx
+
+			u := NewUserService(mockRepo)
+			_, err := u.GetAllUsers(ctx, userCtx)
+
+			if tt.ExpectErr && err == nil {
+				t.Error("Expected err, received nil")
+			}
+
+			if !tt.ExpectErr && err != nil {
+				t.Errorf("Expected success, received %v", err)
+			}
+		})
+	}
+}
+
 func TestUpdateUser(t *testing.T) {
 	t.Run("Agent tries to change role to admin returns error", func(t *testing.T) {
 		mockRepo := &repo.UserRepoMock{

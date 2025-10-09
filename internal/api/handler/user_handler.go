@@ -25,6 +25,25 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 }
 
 func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+
+	users, err := h.userService.GetAllUsers(r.Context(), userCtx)
+	if err != nil {
+		switch err {
+		case service.ErrForbidden:
+			util.RespondWithError(
+				w,
+				http.StatusForbidden,
+				"You are not authorized to view this route",
+			)
+			return
+		default:
+			util.RespondWithError(w, http.StatusBadRequest, "Could not find users")
+			return
+		}
+	}
+
+	util.WriteJSON(w, http.StatusOK, users)
 }
 
 func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {

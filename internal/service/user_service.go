@@ -19,6 +19,19 @@ func NewUserService(userRepo userRepo.IUserRepo) *UserService {
 	}
 }
 
+var ErrForbidden = errors.New("forbidden")
+
+func (s *UserService) GetAllUsers(
+	ctx context.Context,
+	userCtx *domain.ContextSessionData,
+) ([]*domain.User, error) {
+	if userCtx.Role != "admin" {
+		return nil, ErrForbidden
+	}
+
+	return s.userRepo.GetAllUsers(ctx)
+}
+
 func (s *UserService) GetUserById(ctx context.Context, id int) (*domain.User, error) {
 	return s.userRepo.GetUserById(ctx, id)
 }

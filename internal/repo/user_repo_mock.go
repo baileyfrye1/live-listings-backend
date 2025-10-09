@@ -8,12 +8,17 @@ import (
 )
 
 type UserRepoMock struct {
+	GetAllUsersFunc    func(ctx context.Context) ([]*domain.User, error)
 	GetUserByIdFunc    func(ctx context.Context, id int) (*domain.User, error)
 	GetAgentByIdFunc   func(ctx context.Context, id int) (*domain.Agent, error)
 	GetUserByEmailFunc func(ctx context.Context, email string) (*domain.User, error)
 	GetUsersByRoleFunc func(ctx context.Context, role string) ([]*domain.User, error)
 	CreateUserFunc     func(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUserByIdFunc func(ctx context.Context, user *dto.UpdateUserRequest, id int) (*domain.User, error)
+}
+
+func (u *UserRepoMock) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
+	return u.GetAllUsersFunc(ctx)
 }
 
 func (u *UserRepoMock) GetUserById(ctx context.Context, id int) (*domain.User, error) {

@@ -94,6 +94,9 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	userId := chi.URLParam(r, "userId")
+	targetId := userCtx.UserID
+
 	var req dto.UpdateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -101,7 +104,26 @@ func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx)
+	if userId != "" {
+		if userCtx.Role != "admin" {
+			util.RespondWithError(
+				w,
+				http.StatusForbidden,
+				"You are not authorized to use this route",
+			)
+			return
+		}
+
+		parsedId, err := strconv.Atoi(userId)
+		if err == nil {
+			targetId = parsedId
+		} else {
+			util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID provided. Please provide a valid ID")
+			return
+		}
+	}
+
+	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx, targetId)
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return

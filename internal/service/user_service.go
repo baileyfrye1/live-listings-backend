@@ -48,6 +48,7 @@ func (s *UserService) UpdateUserById(
 	ctx context.Context,
 	userReq *dto.UpdateUserRequest,
 	userCtx *domain.ContextSessionData,
+	userId int,
 ) (*domain.User, error) {
 	if userCtx.Role != "admin" && userReq.Role != nil && *userReq.Role == "admin" {
 		return nil, errors.New(
@@ -55,5 +56,5 @@ func (s *UserService) UpdateUserById(
 		)
 	}
 
-	return s.userRepo.UpdateUserById(ctx, userReq, userCtx.UserID)
+	return s.userRepo.UpdateUserById(ctx, userReq, userId)
 }

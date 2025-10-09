@@ -90,7 +90,7 @@ func TestUpdateUser(t *testing.T) {
 		ctx := context.Background()
 
 		u := NewUserService(mockRepo)
-		_, err := u.UpdateUserById(ctx, userReq, userCtx)
+		_, err := u.UpdateUserById(ctx, userReq, userCtx, userCtx.UserID)
 		wantErr := "Cannot change role to admin. Please contact admin to request admin privileges"
 
 		if err == nil {
@@ -117,7 +117,7 @@ func TestUpdateUser(t *testing.T) {
 		ctx := context.Background()
 
 		u := NewUserService(mockRepo)
-		_, err := u.UpdateUserById(ctx, userReq, userCtx)
+		_, err := u.UpdateUserById(ctx, userReq, userCtx, userCtx.UserID)
 		wantErr := "Cannot change role to admin. Please contact admin to request admin privileges"
 
 		if err == nil {
@@ -144,7 +144,7 @@ func TestUpdateUser(t *testing.T) {
 		ctx := context.Background()
 
 		u := NewUserService(mockRepo)
-		_, err := u.UpdateUserById(ctx, userReq, userCtx)
+		_, err := u.UpdateUserById(ctx, userReq, userCtx, userCtx.UserID)
 		if err != nil {
 			t.Errorf("Expected success, received %q", err.Error())
 		}

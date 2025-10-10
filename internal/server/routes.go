@@ -18,7 +18,7 @@ import (
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	authMiddleware := middleware.Authenticate(s.session, s.userRepo)
-	authorizeMiddleware := middleware.Authorize(s.session, s.userRepo)
+	authorizeMiddleware := middleware.Authorize()
 
 	r.Use(cm.Logger)
 
@@ -60,6 +60,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 			r.Post("/listings", s.listingHandler.CreateListing)
 			r.Patch("/listings/{listingId}", s.listingHandler.UpdateMyListing)
 			r.Delete("/listings/{listingId}", s.listingHandler.DeleteMyListing)
+
+			r.Get("/users", s.userHandler.GetAllUsers)
+			r.Patch("/users/{userId}", s.userHandler.UpdateUserById)
 		})
 	})
 

@@ -6,9 +6,15 @@ import (
 	"net/url"
 
 	"server/internal/domain"
-	"server/internal/repo"
-	"server/internal/session"
 )
+
+type SessionProvider interface {
+	GetSession(ctx context.Context, sessionId string) (*domain.SessionData, error)
+}
+
+type UserProvider interface {
+	GetUserById(ctx context.Context, userId int) (*domain.User, error)
+}
 
 type contextKey string
 
@@ -17,8 +23,8 @@ const (
 )
 
 func Authenticate(
-	session *session.Session,
-	userRepo *repo.UserRepository,
+	session SessionProvider,
+	userRepo UserProvider,
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,17 +66,14 @@ func Authenticate(
 	}
 }
 
-func Authorize(
-	session *session.Session,
-	userRepo *repo.UserRepository,
-) func(http.Handler) http.Handler {
+func Authorize() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			sess := ctx.Value(UserContextKey).(*domain.ContextSessionData)
 
 			if sess.Role == "user" {
-				http.Error(w, "Unauthorized", http.StatusForbidden)
+				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 

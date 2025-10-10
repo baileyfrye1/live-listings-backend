@@ -14,7 +14,7 @@ import (
 
 func CreateSession(
 	ctx context.Context,
-	session *session.Session,
+	session session.ISession,
 	user *domain.User,
 ) (string, error) {
 	sessionID := generateSessionID()

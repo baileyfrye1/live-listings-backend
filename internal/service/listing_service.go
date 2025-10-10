@@ -2,17 +2,18 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
-	"server/internal/repo"
+	listingRepo "server/internal/repo"
 )
 
 type ListingService struct {
-	listingRepo *repo.ListingRepository
+	listingRepo listingRepo.IListingRepo
 }
 
-func NewListingService(listingRepo *repo.ListingRepository) *ListingService {
+func NewListingService(listingRepo listingRepo.IListingRepo) *ListingService {
 	return &ListingService{listingRepo: listingRepo}
 }
 
@@ -40,17 +41,23 @@ func (s *ListingService) CreateListing(
 
 func (s *ListingService) UpdateListingById(
 	ctx context.Context,
-	listing *dto.UpdateListingRequest,
-	currentAgentId int,
+	listingReq *dto.UpdateListingRequest,
+	currentUserCtx *domain.ContextSessionData,
 	listingId int,
 ) (*domain.Listing, error) {
-	return s.listingRepo.UpdateListingById(ctx, listing, currentAgentId, listingId)
+	if (currentUserCtx.Role == "agent") && listingReq.AgentID != nil {
+		return nil, errors.New(
+			"Cannot update agent on listing. Please contact admin to change agent",
+		)
+	}
+
+	return s.listingRepo.UpdateListingById(ctx, listingReq, currentUserCtx, listingId)
 }
 
 func (s *ListingService) DeleteListingById(
 	ctx context.Context,
-	currentAgentId int,
+	currentUserCtx *domain.ContextSessionData,
 	listingId int,
 ) error {
-	return s.listingRepo.DeleteListingById(ctx, currentAgentId, listingId)
+	return s.listingRepo.DeleteListingById(ctx, currentUserCtx, listingId)
 }

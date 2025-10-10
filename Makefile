@@ -42,6 +42,11 @@ down:
 test:
 	@echo "Testing..."
 	@go test ./... -v
+
+cover:
+	@echo "Calculating code coverage..."
+	@go test ./... -cover
+
 # Integrations Tests for the application
 itest:
 	@echo "Running integration tests..."

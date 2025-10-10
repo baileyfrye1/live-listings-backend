@@ -24,6 +24,28 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 	}
 }
 
+func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+
+	users, err := h.userService.GetAllUsers(r.Context(), userCtx)
+	if err != nil {
+		switch err {
+		case service.ErrForbidden:
+			util.RespondWithError(
+				w,
+				http.StatusForbidden,
+				"You are not authorized to view this route",
+			)
+			return
+		default:
+			util.RespondWithError(w, http.StatusBadRequest, "Could not find users")
+			return
+		}
+	}
+
+	util.WriteJSON(w, http.StatusOK, users)
+}
+
 func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 	agents, err := h.userService.GetUsersByRole(r.Context(), "agent")
 	if err != nil {
@@ -37,13 +59,21 @@ func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetAgentById(w http.ResponseWriter, r *http.Request) {
 	agentId, err := strconv.Atoi(chi.URLParam(r, "agentId"))
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "Could not find agent with that ID")
+		util.RespondWithError(
+			w,
+			http.StatusBadRequest,
+			"Incorrect ID provided. Please provide a valid ID",
+		)
 		return
 	}
 
 	agent, err := h.userService.GetAgentById(r.Context(), agentId)
 	if err != nil {
-		util.RespondWithError(w, http.StatusInternalServerError, "Error fetching agent")
+		util.RespondWithError(
+			w,
+			http.StatusInternalServerError,
+			"Agent could not be found with that ID",
+		)
 		return
 	}
 
@@ -64,6 +94,9 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 	userCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	userId := chi.URLParam(r, "userId")
+	targetId := userCtx.UserID
+
 	var req dto.UpdateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -71,9 +104,28 @@ func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx.UserID)
+	if userId != "" {
+		if userCtx.Role != "admin" {
+			util.RespondWithError(
+				w,
+				http.StatusForbidden,
+				"You are not authorized to use this route",
+			)
+			return
+		}
+
+		parsedId, err := strconv.Atoi(userId)
+		if err == nil {
+			targetId = parsedId
+		} else {
+			util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID provided. Please provide a valid ID")
+			return
+		}
+	}
+
+	user, err := h.userService.UpdateUserById(r.Context(), &req, userCtx, targetId)
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "Could not find user")
+		util.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

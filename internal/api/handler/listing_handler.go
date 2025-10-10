@@ -139,10 +139,10 @@ func (h *ListingHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ListingHandler) UpdateMyListing(w http.ResponseWriter, r *http.Request) {
-	currentAgentCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
+	currentUserCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
 	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "No listing exists with that ID")
+		util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID format")
 	}
 
 	var req dto.UpdateListingRequest
@@ -152,19 +152,10 @@ func (h *ListingHandler) UpdateMyListing(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if (currentAgentCtx.Role == "agent") && req.AgentID != nil {
-		util.RespondWithError(
-			w,
-			http.StatusBadRequest,
-			"Cannot update agent on listing. Please contact admin to change agent",
-		)
-		return
-	}
-
 	listing, err := h.listingService.UpdateListingById(
 		r.Context(),
 		&req,
-		currentAgentCtx.UserID,
+		currentUserCtx,
 		listingId,
 	)
 	if err != nil {
@@ -176,14 +167,14 @@ func (h *ListingHandler) UpdateMyListing(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *ListingHandler) DeleteMyListing(w http.ResponseWriter, r *http.Request) {
-	currentAgentId := r.Context().Value(middleware.UserContextKey).(int)
+	currentUserCtx := r.Context().Value(middleware.UserContextKey).(*domain.ContextSessionData)
 	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, "No listing exists with that ID")
+		util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID format")
 		return
 	}
 
-	err = h.listingService.DeleteListingById(r.Context(), currentAgentId, listingId)
+	err = h.listingService.DeleteListingById(r.Context(), currentUserCtx, listingId)
 	if err != nil {
 		util.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return

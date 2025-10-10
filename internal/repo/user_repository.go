@@ -10,12 +10,65 @@ import (
 	"server/internal/domain"
 )
 
+type IUserRepo interface {
+	GetAllUsers(ctx context.Context) ([]*domain.User, error)
+	GetUserById(ctx context.Context, id int) (*domain.User, error)
+	GetAgentById(ctx context.Context, id int) (*domain.Agent, error)
+	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error)
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+	UpdateUserById(
+		ctx context.Context,
+		userReq *dto.UpdateUserRequest,
+		id int,
+	) (*domain.User, error)
+}
+
 type UserRepository struct {
 	db *sql.DB
 }
 
 func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
+}
+
+func (r *UserRepository) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
+	query := `
+		SELECT id, first_name, last_name, email, role
+		FROM users
+		WHERE role = 'user' OR role = 'agent'
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var users []*domain.User
+
+	for rows.Next() {
+		user := new(domain.User)
+
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.Role,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User, error) {
@@ -47,9 +100,9 @@ func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User,
 
 func (r *UserRepository) GetAgentById(ctx context.Context, id int) (*domain.Agent, error) {
 	query := `
-		SELECT id, first_name, last_name, email, created_at, updated_at, role
+		SELECT id, first_name, last_name, email, created_at, updated_at
 		FROM users
-		WHERE id = $1 AND role = "agent"
+		WHERE id = $1 AND role = 'agent'
 	`
 	var agent domain.Agent
 

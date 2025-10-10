@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"server/internal/domain"
+	"server/internal/repo"
+	"server/internal/session"
 )
 
 type sessionMock struct {
@@ -34,27 +36,23 @@ func TestAuthentication(t *testing.T) {
 	cases := []struct {
 		description    string
 		cookie         *http.Cookie
-		mockSession    func() *sessionMock
-		mockRepo       func() *userRepoMock
+		mockSession    *session.SessionMock
+		mockRepo       *repo.UserRepoMock
 		wantStatusCode int
 		wantNextCalled bool
 	}{
 		{
 			description: "Valid cookie and session returns success",
 			cookie:      &http.Cookie{Name: "session", Value: "abc123"},
-			mockSession: func() *sessionMock {
-				return &sessionMock{
-					GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
-						return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
-					},
-				}
+			mockSession: &session.SessionMock{
+				GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
+					return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
+				},
 			},
-			mockRepo: func() *userRepoMock {
-				return &userRepoMock{
-					GetByUserIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
-						return &domain.User{ID: 123, Role: "agent"}, nil
-					},
-				}
+			mockRepo: &repo.UserRepoMock{
+				GetUserByIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
+					return &domain.User{ID: 123, Role: "agent"}, nil
+				},
 			},
 			wantStatusCode: http.StatusOK,
 			wantNextCalled: true,
@@ -62,19 +60,15 @@ func TestAuthentication(t *testing.T) {
 		{
 			description: "Missing cookie returns unauthorized",
 			cookie:      nil,
-			mockSession: func() *sessionMock {
-				return &sessionMock{
-					GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
-						return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
-					},
-				}
+			mockSession: &session.SessionMock{
+				GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
+					return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
+				},
 			},
-			mockRepo: func() *userRepoMock {
-				return &userRepoMock{
-					GetByUserIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
-						return &domain.User{ID: 123, Role: "agent"}, nil
-					},
-				}
+			mockRepo: &repo.UserRepoMock{
+				GetUserByIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
+					return &domain.User{ID: 123, Role: "agent"}, nil
+				},
 			},
 			wantStatusCode: http.StatusUnauthorized,
 			wantNextCalled: false,
@@ -82,19 +76,15 @@ func TestAuthentication(t *testing.T) {
 		{
 			description: "Session lookup fails returns unauthorized",
 			cookie:      &http.Cookie{Name: "session", Value: "abc123"},
-			mockSession: func() *sessionMock {
-				return &sessionMock{
-					GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
-						return nil, errors.New("Session not found")
-					},
-				}
+			mockSession: &session.SessionMock{
+				GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
+					return nil, errors.New("Session not found")
+				},
 			},
-			mockRepo: func() *userRepoMock {
-				return &userRepoMock{
-					GetByUserIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
-						return &domain.User{ID: 123, Role: "agent"}, nil
-					},
-				}
+			mockRepo: &repo.UserRepoMock{
+				GetUserByIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
+					return &domain.User{ID: 123, Role: "agent"}, nil
+				},
 			},
 			wantStatusCode: http.StatusUnauthorized,
 			wantNextCalled: false,
@@ -102,19 +92,15 @@ func TestAuthentication(t *testing.T) {
 		{
 			description: "User lookup fails returns unauthorized",
 			cookie:      &http.Cookie{Name: "session", Value: "abc123"},
-			mockSession: func() *sessionMock {
-				return &sessionMock{
-					GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
-						return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
-					},
-				}
+			mockSession: &session.SessionMock{
+				GetSessionFunc: func(ctx context.Context, sessionId string) (*domain.SessionData, error) {
+					return &domain.SessionData{UserID: 123, CreatedAt: time.Now()}, nil
+				},
 			},
-			mockRepo: func() *userRepoMock {
-				return &userRepoMock{
-					GetByUserIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
-						return nil, errors.New("User not found")
-					},
-				}
+			mockRepo: &repo.UserRepoMock{
+				GetUserByIdFunc: func(ctx context.Context, id int) (*domain.User, error) {
+					return nil, errors.New("User not found")
+				},
 			},
 			wantStatusCode: http.StatusUnauthorized,
 			wantNextCalled: false,
@@ -135,7 +121,7 @@ func TestAuthentication(t *testing.T) {
 				req.AddCookie(tt.cookie)
 			}
 
-			mw := Authenticate(tt.mockSession(), tt.mockRepo())
+			mw := Authenticate(tt.mockSession, tt.mockRepo)
 			mw(next).ServeHTTP(recorder, req)
 
 			if recorder.Code != tt.wantStatusCode {

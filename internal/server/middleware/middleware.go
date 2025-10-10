@@ -6,15 +6,9 @@ import (
 	"net/url"
 
 	"server/internal/domain"
+	"server/internal/repo"
+	"server/internal/session"
 )
-
-type SessionProvider interface {
-	GetSession(ctx context.Context, sessionId string) (*domain.SessionData, error)
-}
-
-type UserProvider interface {
-	GetUserById(ctx context.Context, userId int) (*domain.User, error)
-}
 
 type contextKey string
 
@@ -23,8 +17,8 @@ const (
 )
 
 func Authenticate(
-	session SessionProvider,
-	userRepo UserProvider,
+	session session.ISession,
+	userRepo repo.IUserRepo,
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

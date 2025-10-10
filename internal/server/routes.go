@@ -52,6 +52,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Patch("/users/profile", s.userHandler.UpdateUserById)
 		r.Post("/auth/logout", s.authHandler.Logout)
 
+		r.Post("/favorites", s.favoriteHandler.CreateFavorite)
+
 		// Agent/admin routes
 		r.Group(func(r chi.Router) {
 			r.Use(authorizeMiddleware)

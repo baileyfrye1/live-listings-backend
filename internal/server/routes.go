@@ -52,7 +52,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Patch("/users/profile", s.userHandler.UpdateUserById)
 		r.Post("/auth/logout", s.authHandler.Logout)
 
+		r.Get("/favorites", s.favoriteHandler.GetUserFavorites)
 		r.Post("/favorites", s.favoriteHandler.CreateFavorite)
+		r.Delete("/favorites/{listingId}", s.favoriteHandler.DeleteFavoriteByListingId)
 
 		// Agent/admin routes
 		r.Group(func(r chi.Router) {

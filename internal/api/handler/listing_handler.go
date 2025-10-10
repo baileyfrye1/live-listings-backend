@@ -30,6 +30,7 @@ func (h *ListingHandler) GetAllListings(w http.ResponseWriter, r *http.Request) 
 	listings, err := h.listingService.GetAllListings(r.Context())
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	util.WriteJSON(w, http.StatusOK, listings)
@@ -143,6 +144,7 @@ func (h *ListingHandler) UpdateMyListing(w http.ResponseWriter, r *http.Request)
 	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID format")
+		return
 	}
 
 	var req dto.UpdateListingRequest

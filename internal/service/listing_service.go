@@ -18,14 +18,32 @@ func NewListingService(listingRepo listingRepo.IListingRepo) *ListingService {
 }
 
 func (s *ListingService) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
-	return s.listingRepo.GetAllListings(ctx)
+	listings, err := s.listingRepo.GetAllListings(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if listings == nil {
+		listings = []*domain.Listing{}
+	}
+
+	return listings, nil
 }
 
 func (s *ListingService) GetListingsByAgentId(
 	ctx context.Context,
 	agentId int,
 ) ([]*domain.Listing, error) {
-	return s.listingRepo.GetListingsByAgentId(ctx, agentId)
+	listings, err := s.listingRepo.GetListingsByAgentId(ctx, agentId)
+	if err != nil {
+		return nil, err
+	}
+
+	if listings == nil {
+		listings = []*domain.Listing{}
+	}
+
+	return listings, nil
 }
 
 func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
@@ -34,7 +52,7 @@ func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Li
 
 func (s *ListingService) CreateListing(
 	ctx context.Context,
-	listing *dto.CreateListingRequest,
+	listing *domain.Listing,
 ) (*domain.Listing, error) {
 	return s.listingRepo.CreateListing(ctx, listing)
 }

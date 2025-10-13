@@ -2,29 +2,209 @@ package service
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
+	"server/internal/repo"
 )
 
-type listingRepoMock struct {
-	UpdateListingByIdFunc func(ctx context.Context, listingReq *dto.UpdateListingRequest, userCtx *domain.ContextSessionData, id int) (*domain.Listing, error)
+func TestGetAllListings(t *testing.T) {
+	tests := []struct {
+		Name           string
+		MockRepo       *repo.ListingRepoMock
+		ExpectedResult []*domain.Listing
+	}{
+		{
+			Name: "List of listings in database returns slice of listings",
+			MockRepo: &repo.ListingRepoMock{
+				GetAllListingsFunc: func(ctx context.Context) ([]*domain.Listing, error) {
+					return []*domain.Listing{
+						{
+							ID:      1,
+							Price:   400000,
+							Beds:    2,
+							Baths:   1,
+							Address: "123 Test St, Nashville, TN",
+							SqFt:    3200,
+						},
+						{
+							ID:      2,
+							Price:   300000,
+							Beds:    3,
+							Baths:   2,
+							Address: "124 Test St, Nashville, TN",
+							SqFt:    1600,
+						},
+						{
+							ID:      3,
+							Price:   500000,
+							Beds:    3,
+							Baths:   2,
+							Address: "125 Test St, Nashville, TN",
+							SqFt:    4000,
+						},
+					}, nil
+				},
+			},
+			ExpectedResult: []*domain.Listing{
+				{
+					ID:      1,
+					Price:   400000,
+					Beds:    2,
+					Baths:   1,
+					Address: "123 Test St, Nashville, TN",
+					SqFt:    3200,
+				},
+				{
+					ID:      2,
+					Price:   300000,
+					Beds:    3,
+					Baths:   2,
+					Address: "124 Test St, Nashville, TN",
+					SqFt:    1600,
+				},
+				{
+					ID:      3,
+					Price:   500000,
+					Beds:    3,
+					Baths:   2,
+					Address: "125 Test St, Nashville, TN",
+					SqFt:    4000,
+				},
+			},
+		},
+		{
+			Name: "No listings in database returns empty slice",
+			MockRepo: &repo.ListingRepoMock{
+				GetAllListingsFunc: func(ctx context.Context) ([]*domain.Listing, error) {
+					return nil, nil
+				},
+			},
+			ExpectedResult: []*domain.Listing{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			mockRepo := tt.MockRepo
+			ctx := context.Background()
+
+			l := NewListingService(mockRepo)
+
+			listings, err := l.GetAllListings(ctx)
+			if err != nil {
+				t.Error("Wanted empty slice or slice of favorites, received error")
+			}
+
+			if !reflect.DeepEqual(listings, tt.ExpectedResult) {
+				t.Errorf("Expected %#v, received %#v", listings, tt.ExpectedResult)
+			}
+		})
+	}
 }
 
-func (l *listingRepoMock) UpdateListingById(
-	ctx context.Context,
-	listingReq *dto.UpdateListingRequest,
-	userCtx *domain.ContextSessionData,
-	id int,
-) (*domain.Listing, error) {
-	return l.UpdateListingByIdFunc(ctx, listingReq, userCtx, id)
+func TestGetAllListingsByAgentId(t *testing.T) {
+	tests := []struct {
+		Name           string
+		MockRepo       *repo.ListingRepoMock
+		ExpectedResult []*domain.Listing
+	}{
+		{
+			Name: "List of agent listings in database returns slice of listings",
+			MockRepo: &repo.ListingRepoMock{
+				GetListingsByAgentIdFunc: func(ctx context.Context, agentId int) ([]*domain.Listing, error) {
+					return []*domain.Listing{
+						{
+							ID:      1,
+							Price:   400000,
+							Beds:    2,
+							Baths:   1,
+							Address: "123 Test St, Nashville, TN",
+							SqFt:    3200,
+						},
+						{
+							ID:      2,
+							Price:   300000,
+							Beds:    3,
+							Baths:   2,
+							Address: "124 Test St, Nashville, TN",
+							SqFt:    1600,
+						},
+						{
+							ID:      3,
+							Price:   500000,
+							Beds:    3,
+							Baths:   2,
+							Address: "125 Test St, Nashville, TN",
+							SqFt:    4000,
+						},
+					}, nil
+				},
+			},
+			ExpectedResult: []*domain.Listing{
+				{
+					ID:      1,
+					Price:   400000,
+					Beds:    2,
+					Baths:   1,
+					Address: "123 Test St, Nashville, TN",
+					SqFt:    3200,
+				},
+				{
+					ID:      2,
+					Price:   300000,
+					Beds:    3,
+					Baths:   2,
+					Address: "124 Test St, Nashville, TN",
+					SqFt:    1600,
+				},
+				{
+					ID:      3,
+					Price:   500000,
+					Beds:    3,
+					Baths:   2,
+					Address: "125 Test St, Nashville, TN",
+					SqFt:    4000,
+				},
+			},
+		},
+		{
+			Name: "No agent listings in database returns empty slice",
+			MockRepo: &repo.ListingRepoMock{
+				GetListingsByAgentIdFunc: func(ctx context.Context, agentId int) ([]*domain.Listing, error) {
+					return nil, nil
+				},
+			},
+			ExpectedResult: []*domain.Listing{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			mockRepo := tt.MockRepo
+			ctx := context.Background()
+			agentId := 1
+
+			l := NewListingService(mockRepo)
+
+			favorites, err := l.GetListingsByAgentId(ctx, agentId)
+			if err != nil {
+				t.Error("Wanted empty slice or slice of favorites, received error")
+			}
+
+			if !reflect.DeepEqual(favorites, tt.ExpectedResult) {
+				t.Errorf("Expected %#v, received %#v", favorites, tt.ExpectedResult)
+			}
+		})
+	}
 }
 
 func TestUpdateListing(t *testing.T) {
 	t.Run("Agent tries to change agent id on listing returns error", func(t *testing.T) {
-		mockListing := &listingRepoMock{
+		mockListing := &repo.ListingRepoMock{
 			UpdateListingByIdFunc: func(ctx context.Context, listingReq *dto.UpdateListingRequest, userCtx *domain.ContextSessionData, id int) (*domain.Listing, error) {
 				return &domain.Listing{
 					ID:        1,
@@ -59,7 +239,7 @@ func TestUpdateListing(t *testing.T) {
 	})
 
 	t.Run("Admin tries to change agent id on listing returns success", func(t *testing.T) {
-		mockListing := &listingRepoMock{
+		mockListing := &repo.ListingRepoMock{
 			UpdateListingByIdFunc: func(ctx context.Context, listingReq *dto.UpdateListingRequest, userCtx *domain.ContextSessionData, id int) (*domain.Listing, error) {
 				return &domain.Listing{
 					ID:        1,
@@ -86,35 +266,4 @@ func TestUpdateListing(t *testing.T) {
 			t.Errorf("Expected success, received %q", err.Error())
 		}
 	})
-}
-
-// Rest of interface methods to satisfy interface requirements
-func (l *listingRepoMock) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
-	return nil, nil
-}
-
-func (l *listingRepoMock) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
-	return nil, nil
-}
-
-func (l *listingRepoMock) GetListingsByAgentId(
-	ctx context.Context,
-	agentId int,
-) ([]*domain.Listing, error) {
-	return nil, nil
-}
-
-func (l *listingRepoMock) CreateListing(
-	ctx context.Context,
-	listing *dto.CreateListingRequest,
-) (*domain.Listing, error) {
-	return nil, nil
-}
-
-func (l *listingRepoMock) DeleteListingById(
-	ctx context.Context,
-	currentUserCtx *domain.ContextSessionData,
-	listingId int,
-) error {
-	return nil
 }

@@ -130,7 +130,17 @@ func (h *ListingHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 		req.AgentID = &agentCtx.UserID
 	}
 
-	listing, err := h.listingService.CreateListing(r.Context(), &req)
+	newListing := &domain.Listing{
+		Address:     req.Address,
+		Price:       req.Price,
+		Beds:        req.Beds,
+		Baths:       req.Baths,
+		SqFt:        req.SqFt,
+		Description: req.Description,
+		AgentID:     *req.AgentID,
+	}
+
+	listing, err := h.listingService.CreateListing(r.Context(), newListing)
 	if err != nil {
 		util.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return

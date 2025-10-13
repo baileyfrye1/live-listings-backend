@@ -13,7 +13,7 @@ type IListingRepo interface {
 	GetAllListings(ctx context.Context) ([]*domain.Listing, error)
 	GetListingById(ctx context.Context, id int) (*domain.Listing, error)
 	GetListingsByAgentId(ctx context.Context, agentId int) ([]*domain.Listing, error)
-	CreateListing(ctx context.Context, listing *dto.CreateListingRequest) (*domain.Listing, error)
+	CreateListing(ctx context.Context, listing *domain.Listing) (*domain.Listing, error)
 	UpdateListingById(
 		ctx context.Context,
 		listing *dto.UpdateListingRequest,
@@ -175,13 +175,13 @@ func (r *ListingRepository) GetListingsByAgentId(
 
 func (r *ListingRepository) CreateListing(
 	ctx context.Context,
-	listing *dto.CreateListingRequest,
+	listing *domain.Listing,
 ) (*domain.Listing, error) {
 	query := `
 		WITH new_listing AS (
 			INSERT INTO listings (address, price, beds, baths, sq_ft, agent_id)
 			VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING *
+			RETURNING id, created_at, updated_at, agent_id
 		)
 		SELECT nl.*, u.id AS agent_id, u.first_name AS agent_first_name,
 			   u.last_name AS agent_last_name, u.email AS agent_email
@@ -189,21 +189,15 @@ func (r *ListingRepository) CreateListing(
 		INNER JOIN users u ON nl.agent_id = u.id
 	`
 
-	var newListing domain.Listing
+	newListing := *listing
 	newListing.Agent = new(domain.Agent)
 
 	err := r.db.QueryRowContext(ctx, query, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
 		Scan(
 			&newListing.ID,
-			&newListing.Address,
-			&newListing.Price,
-			&newListing.Beds,
-			&newListing.Baths,
-			&newListing.SqFt,
-			&newListing.Description,
-			&newListing.AgentID,
 			&newListing.CreatedAt,
 			&newListing.UpdatedAt,
+			&newListing.AgentID,
 			&newListing.Agent.ID,
 			&newListing.Agent.FirstName,
 			&newListing.Agent.LastName,

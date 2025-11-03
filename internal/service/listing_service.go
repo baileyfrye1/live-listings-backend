@@ -79,3 +79,10 @@ func (s *ListingService) DeleteListingById(
 ) error {
 	return s.listingRepo.DeleteListingById(ctx, currentUserCtx, listingId)
 }
+
+func (s *ListingService) TrackViewsByListingId(
+	ctx context.Context,
+	listingId int,
+) error {
+	return s.listingRepo.TrackViewsByListingId(ctx, listingId)
+}

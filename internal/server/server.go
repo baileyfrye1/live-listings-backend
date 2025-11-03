@@ -13,19 +13,22 @@ import (
 	"server/internal/api/handler"
 	"server/internal/repo"
 	"server/internal/session"
+	"server/internal/ws"
 )
 
 type Server struct {
 	port int
 
-	db              database.Service
-	session         *session.Session
-	userRepo        *repo.UserRepository
-	listingRepo     *repo.ListingRepository
-	userHandler     *handler.UserHandler
-	authHandler     *handler.AuthHandler
-	listingHandler  *handler.ListingHandler
-	favoriteHandler *handler.FavoriteHandler
+	db                  database.Service
+	session             *session.Session
+	userRepo            *repo.UserRepository
+	listingRepo         *repo.ListingRepository
+	userHandler         *handler.UserHandler
+	authHandler         *handler.AuthHandler
+	listingHandler      *handler.ListingHandler
+	favoriteHandler     *handler.FavoriteHandler
+	notificationHandler *handler.NotificationHandler
+	wsManager           *ws.Manager
 }
 
 func NewServer(
@@ -37,18 +40,22 @@ func NewServer(
 	authHandler *handler.AuthHandler,
 	listingHandler *handler.ListingHandler,
 	favoriteHandler *handler.FavoriteHandler,
+	notificationHandler *handler.NotificationHandler,
+	wsManager *ws.Manager,
 ) *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
-		port:            port,
-		db:              db,
-		session:         session,
-		userRepo:        userRepo,
-		listingRepo:     listingRepo,
-		userHandler:     userHandler,
-		authHandler:     authHandler,
-		listingHandler:  listingHandler,
-		favoriteHandler: favoriteHandler,
+		port:                port,
+		db:                  db,
+		session:             session,
+		userRepo:            userRepo,
+		listingRepo:         listingRepo,
+		userHandler:         userHandler,
+		authHandler:         authHandler,
+		listingHandler:      listingHandler,
+		favoriteHandler:     favoriteHandler,
+		notificationHandler: notificationHandler,
+		wsManager:           wsManager,
 	}
 
 	// Declare Server config

@@ -25,6 +25,8 @@ type IListingRepo interface {
 		currentUserCtx *domain.ContextSessionData,
 		listingId int,
 	) error
+	GetAgentIdByListingId(ctx context.Context, listingId int) (int, error)
+	TrackViewsByListingId(ctx context.Context, listingId int) error
 }
 
 type ListingRepository struct {
@@ -70,6 +72,7 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 			&listing.AgentID,
 			&listing.CreatedAt,
 			&listing.UpdatedAt,
+			&listing.Views,
 			&listing.Agent.ID,
 			&listing.Agent.FirstName,
 			&listing.Agent.LastName,
@@ -116,6 +119,7 @@ func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain
 		&listing.AgentID,
 		&listing.CreatedAt,
 		&listing.UpdatedAt,
+		&listing.Views,
 		&listing.Agent.ID,
 		&listing.Agent.FirstName,
 		&listing.Agent.LastName,
@@ -158,6 +162,7 @@ func (r *ListingRepository) GetListingsByAgentId(
 			&listing.AgentID,
 			&listing.CreatedAt,
 			&listing.UpdatedAt,
+			&listing.Views,
 		)
 		if err != nil {
 			return nil, err
@@ -260,6 +265,7 @@ func (r *ListingRepository) UpdateListingById(
 		&updatedListing.AgentID,
 		&updatedListing.CreatedAt,
 		&updatedListing.UpdatedAt,
+		&updatedListing.Views,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -302,6 +308,42 @@ func (r *ListingRepository) DeleteListingById(
 
 	if rows != 1 {
 		return errors.New("Cannot delete other agent's listing")
+	}
+
+	return nil
+}
+
+func (r *ListingRepository) GetAgentIdByListingId(ctx context.Context, listingId int) (int, error) {
+	query := `
+		SELECT agent_id FROM listings
+		WHERE id = $1
+	`
+
+	var agentId int
+
+	if err := r.db.QueryRowContext(ctx, query, listingId).Scan(&agentId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, errors.New("Listing not found or you do not have permission")
+		}
+		return 0, err
+	}
+
+	return agentId, nil
+}
+
+func (r *ListingRepository) TrackViewsByListingId(
+	ctx context.Context,
+	listingId int,
+) error {
+	query := `
+		UPDATE listings
+		SET views = views + 1
+		WHERE id = $1
+	`
+
+	_, err := r.db.ExecContext(ctx, query, listingId)
+	if err != nil {
+		return err
 	}
 
 	return nil

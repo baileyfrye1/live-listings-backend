@@ -16,6 +16,7 @@ import (
 	"server/internal/server"
 	"server/internal/service"
 	"server/internal/session"
+	"server/internal/ws"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {
@@ -59,18 +60,26 @@ func main() {
 	userRepo := repo.NewUserRepository(dbService.DB())
 	listingRepo := repo.NewListingRepository(dbService.DB())
 	favoriteRepo := repo.NewFavoriteRepo(dbService.DB())
+	notificationRepo := repo.NewNotificationRepository(dbService.DB())
 
 	// Setup services
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, session)
 	listingService := service.NewListingService(listingRepo)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
+	notificationService := service.NewNotificationService(
+		notificationRepo,
+		favoriteRepo,
+		listingRepo,
+	)
 
 	// Setup handlers
 	userHandler := handler.NewUserHandler(userService)
 	authHandler := handler.NewAuthHandler(authService)
 	listingHandler := handler.NewListingHandler(listingService, userService)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteService)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
+	wsManager := ws.NewManager(notificationService)
 
 	server := server.NewServer(
 		dbService,
@@ -81,6 +90,8 @@ func main() {
 		authHandler,
 		listingHandler,
 		favoriteHandler,
+		notificationHandler,
+		wsManager,
 	)
 
 	// Create a done channel to signal when the shutdown is complete

@@ -26,8 +26,14 @@ func Authenticate(
 
 			cookie, err := r.Cookie("session")
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
+				sessionHeader := r.Header.Get("X-Session-Token")
+
+				if sessionHeader == "" {
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+
+				cookie = &http.Cookie{Name: "session", Value: sessionHeader}
 			}
 
 			sessionID, err := url.QueryUnescape(cookie.Value)

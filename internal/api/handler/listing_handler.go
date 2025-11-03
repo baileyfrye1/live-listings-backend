@@ -192,5 +192,21 @@ func (h *ListingHandler) DeleteMyListing(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	util.WriteJSON(w, http.StatusOK, map[string]string{"message": "Successfully deleted"})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ListingHandler) TrackViewsByListingId(w http.ResponseWriter, r *http.Request) {
+	listingId, err := strconv.Atoi(chi.URLParam(r, "listingId"))
+	if err != nil {
+		util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID format")
+		return
+	}
+
+	err = h.listingService.TrackViewsByListingId(r.Context(), listingId)
+	if err != nil {
+		util.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

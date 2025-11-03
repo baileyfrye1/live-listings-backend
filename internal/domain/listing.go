@@ -14,4 +14,5 @@ type Listing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	Agent       *Agent    `json:"agent"`
+	Views       int       `json:"views"`
 }

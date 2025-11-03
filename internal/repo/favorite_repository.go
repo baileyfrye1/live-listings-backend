@@ -20,6 +20,7 @@ type IFavoriteRepo interface {
 		listingId int,
 		userCtx *domain.ContextSessionData,
 	) error
+	GetAllUserIdsByListingId(ctx context.Context, listingId int) (map[int]bool, error)
 }
 
 type FavoriteRepo struct {
@@ -127,4 +128,39 @@ func (r *FavoriteRepo) DeleteFavoriteByListingId(
 	}
 
 	return nil
+}
+
+func (r *FavoriteRepo) GetAllUserIdsByListingId(
+	ctx context.Context,
+	listingId int,
+) (map[int]bool, error) {
+	query := `
+		SELECT user_id FROM favorites
+		WHERE listing_id = $1
+	`
+
+	userIds := make(map[int]bool)
+
+	rows, err := r.db.QueryContext(ctx, query, listingId)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var userId int
+
+		if err := rows.Scan(&userId); err != nil {
+			return nil, err
+		}
+
+		userIds[userId] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return userIds, nil
 }

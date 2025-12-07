@@ -75,4 +75,8 @@ dev:
             fi; \
         fi
 
+update:
+	@echo "Updating project packages"
+	@go get -u ./...
+
 .PHONY: all build run test clean watch docker-run docker-down itest

@@ -2,9 +2,11 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
@@ -25,10 +27,10 @@ type IUserRepo interface {
 }
 
 type UserRepository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
+func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 	return &UserRepository{db: db}
 }
 
@@ -38,7 +40,7 @@ func (r *UserRepository) GetAllUsers(ctx context.Context) ([]*domain.User, error
 		FROM users
 		WHERE role = 'user' OR role = 'agent'
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +81,7 @@ func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User,
 	`
 	var user domain.User
 
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.FirstName,
 		&user.LastName,
@@ -89,7 +91,7 @@ func (r *UserRepository) GetUserById(ctx context.Context, id int) (*domain.User,
 		&user.Role,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("Query user by id: %w", err)
@@ -106,7 +108,7 @@ func (r *UserRepository) GetAgentById(ctx context.Context, id int) (*domain.Agen
 	`
 	var agent domain.Agent
 
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&agent.ID,
 		&agent.FirstName,
 		&agent.LastName,
@@ -115,7 +117,7 @@ func (r *UserRepository) GetAgentById(ctx context.Context, id int) (*domain.Agen
 		&agent.UpdatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("Query user by id: %w", err)
@@ -132,7 +134,7 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 
 	var user domain.User
 
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
+	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.FirstName,
 		&user.LastName,
@@ -143,7 +145,7 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 		&user.Role,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("Query user by email: %w", err)
@@ -159,7 +161,7 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 		WHERE role = $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, role)
+	rows, err := r.db.Query(ctx, query, role)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +204,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) (*do
 
 	newUser := *user
 
-	err := r.db.QueryRowContext(ctx, query, user.FirstName, user.LastName, user.Email, user.PasswordHash, user.Role).
+	err := r.db.QueryRow(ctx, query, user.FirstName, user.LastName, user.Email, user.PasswordHash, user.Role).
 		Scan(&newUser.ID, &newUser.CreatedAt, &newUser.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("Insert user: %w", err)
@@ -229,7 +231,7 @@ func (r *UserRepository) UpdateUserById(
 
 	var updatedUser domain.User
 
-	err := r.db.QueryRowContext(ctx, query, user.FirstName, user.LastName, user.Email, user.Role, id).
+	err := r.db.QueryRow(ctx, query, user.FirstName, user.LastName, user.Email, user.Role, id).
 		Scan(
 			&updatedUser.ID,
 			&updatedUser.FirstName,

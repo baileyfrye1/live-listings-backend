@@ -2,8 +2,11 @@ package repo
 
 import (
 	"context"
-	"database/sql"
+	"encoding/json"
 	"errors"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"server/internal/api/dto"
 	"server/internal/domain"
@@ -30,26 +33,43 @@ type IListingRepo interface {
 }
 
 type ListingRepository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewListingRepository(db *sql.DB) *ListingRepository {
+func NewListingRepository(db *pgxpool.Pool) *ListingRepository {
 	return &ListingRepository{db: db}
 }
 
 func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
 	query := `
-		SELECT listings.*,
-			users.id,
-			users.first_name,
-			users.last_name,
-			users.email
-		FROM listings
-		INNER JOIN users
-			ON listings.agent_id = users.id
+		SELECT 
+		l.*,
+		u.id AS agent_id,
+		u.first_name,
+		u.last_name,
+		u.email,
+		COALESCE(
+			json_agg(
+				json_build_object(
+					'id', li.id,
+					'public_id', li.public_id,
+					'listing_id', li.listing_id,
+					'url', li.url,
+					'sort_order', li.sort_order,
+					'is_primary', li.is_primary,
+					'created_at', li.created_at,
+					'updated_at', li.updated_at
+				) ORDER BY li.sort_order ASC
+			) FILTER (WHERE li.id IS NOT NULL),
+			'[]'
+		) AS images
+		FROM listings l
+		INNER JOIN users u ON l.agent_id = u.id
+		LEFT JOIN listing_images li ON l.id = li.listing_id
+		GROUP BY l.id, u.id, u.first_name, u.last_name, u.email;
 	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +77,7 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 	defer rows.Close()
 
 	var listings []*domain.Listing
+	var imagesJson []byte
 	for rows.Next() {
 		listing := new(domain.Listing)
 		listing.Agent = new(domain.Agent)
@@ -77,8 +98,13 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 			&listing.Agent.FirstName,
 			&listing.Agent.LastName,
 			&listing.Agent.Email,
+			&imagesJson,
 		)
 		if err != nil {
+			return nil, err
+		}
+
+		if err = json.Unmarshal(imagesJson, &listing.Images); err != nil {
 			return nil, err
 		}
 
@@ -95,20 +121,38 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
 	query := `
 		SELECT listings.*,
-			users.id,
+			users.id AS agent_id,
 			users.first_name,
 			users.last_name,
-			users.email
-		FROM listings
+			users.email,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', li.id,
+						'public_id', li.public_id,
+						'listing_id', li.listing_id,
+						'url', li.url,
+						'sort_order', li.sort_order,
+						'is_primary', li.is_primary,
+						'created_at', li.created_at,
+						'updated_at', li.updated_at
+					) ORDER BY li.sort_order ASC
+				) FILTER (WHERE li.id IS NOT NULL),
+				'[]'
+			) AS images
+		FROM listings l
 		INNER JOIN users
-			ON listings.agent_id = users.id
-		WHERE listings.id = $1
+			ON l.agent_id = users.id
+		LEFT JOIN listing_images li 
+			ON l.id = li.listing_id	
+		WHERE l.id = $1
+		GROUP BY l.id, users.id, users.first_name, users.last_name, users.email
 	`
 
 	var listing domain.Listing
 	listing.Agent = new(domain.Agent)
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
+	var imagesJson []byte
+	err := r.db.QueryRow(ctx, query, id).Scan(
 		&listing.ID,
 		&listing.Address,
 		&listing.Price,
@@ -124,8 +168,13 @@ func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain
 		&listing.Agent.FirstName,
 		&listing.Agent.LastName,
 		&listing.Agent.Email,
+		&imagesJson,
 	)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(imagesJson, &listing.Images); err != nil {
 		return nil, err
 	}
 
@@ -137,10 +186,29 @@ func (r *ListingRepository) GetListingsByAgentId(
 	agentId int,
 ) ([]*domain.Listing, error) {
 	query := `
-		SELECT * FROM listings
+		SELECT l.*,
+		COALESCE(
+			json_agg(
+				json_build_object(
+					'id', li.id,
+					'public_id', li.public_id,
+					'listing_id', li.listing_id,
+					'url', li.url,
+					'sort_order', li.sort_order,
+					'is_primary', li.is_primary,
+					'created_at', li.created_at,
+					'updated_at', li.updated_at
+				) ORDER BY li.sort_order ASC
+			) FILTER (WHERE li.id IS NOT NULL),
+			'[]'
+		) AS images
+		FROM listings l
+		LEFT JOIN listing_images li 
+			ON l.id = li.listing_id
 		WHERE agent_id = $1
+		GROUP BY l.id
 	`
-	rows, err := r.db.QueryContext(ctx, query, agentId)
+	rows, err := r.db.Query(ctx, query, agentId)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +216,7 @@ func (r *ListingRepository) GetListingsByAgentId(
 	defer rows.Close()
 
 	var listings []*domain.Listing
+	var imagesJson []byte
 	for rows.Next() {
 		listing := new(domain.Listing)
 
@@ -163,8 +232,13 @@ func (r *ListingRepository) GetListingsByAgentId(
 			&listing.CreatedAt,
 			&listing.UpdatedAt,
 			&listing.Views,
+			&imagesJson,
 		)
 		if err != nil {
+			return nil, err
+		}
+
+		if err = json.Unmarshal(imagesJson, &listing.Images); err != nil {
 			return nil, err
 		}
 
@@ -182,7 +256,15 @@ func (r *ListingRepository) CreateListing(
 	ctx context.Context,
 	listing *domain.Listing,
 ) (*domain.Listing, error) {
-	query := `
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	batch := &pgx.Batch{}
+
+	// Create listing SQL query
+	listingQuery := `
 		WITH new_listing AS (
 			INSERT INTO listings (address, price, beds, baths, sq_ft, agent_id)
 			VALUES ($1, $2, $3, $4, $5, $6)
@@ -197,7 +279,7 @@ func (r *ListingRepository) CreateListing(
 	newListing := *listing
 	newListing.Agent = new(domain.Agent)
 
-	err := r.db.QueryRowContext(ctx, query, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
+	err = tx.QueryRow(ctx, listingQuery, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
 		Scan(
 			&newListing.ID,
 			&newListing.CreatedAt,
@@ -209,6 +291,49 @@ func (r *ListingRepository) CreateListing(
 			&newListing.Agent.Email,
 		)
 	if err != nil {
+		return nil, err
+	}
+
+	imageQuery := `
+		INSERT INTO listing_images (public_id, listing_id, url, is_primary, sort_order)	
+		VALUES($1, $2, $3, $4, $5)
+		RETURNING id, public_id, listing_id, url, is_primary, sort_order, created_at, updated_at
+	`
+
+	for _, image := range listing.Images {
+		batch.Queue(
+			imageQuery,
+			image.PublicID,
+			newListing.ID,
+			image.URL,
+			image.IsPrimary,
+			image.SortOrder,
+		)
+	}
+
+	br := tx.SendBatch(ctx, batch)
+
+	for i := range listing.Images {
+		err = br.QueryRow().Scan(
+			&newListing.Images[i].ID,
+			&newListing.Images[i].PublicID,
+			&newListing.Images[i].ListingID,
+			&newListing.Images[i].URL,
+			&newListing.Images[i].IsPrimary,
+			&newListing.Images[i].SortOrder,
+			&newListing.Images[i].CreatedAt,
+			&newListing.Images[i].UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err = br.Close(); err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
@@ -241,7 +366,7 @@ func (r *ListingRepository) UpdateListingById(
 
 	var updatedListing domain.Listing
 
-	err := r.db.QueryRowContext(
+	err := r.db.QueryRow(
 		ctx,
 		query,
 		listing.Address,
@@ -268,7 +393,7 @@ func (r *ListingRepository) UpdateListingById(
 		&updatedListing.Views,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("Listing not found or you do not have permission")
 		}
 		return nil, err
@@ -290,7 +415,7 @@ func (r *ListingRepository) DeleteListingById(
 		)
 	`
 
-	result, err := r.db.ExecContext(
+	result, err := r.db.Exec(
 		ctx,
 		query,
 		listingId,
@@ -301,10 +426,7 @@ func (r *ListingRepository) DeleteListingById(
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
+	rows := result.RowsAffected()
 
 	if rows != 1 {
 		return errors.New("Cannot delete other agent's listing")
@@ -321,8 +443,8 @@ func (r *ListingRepository) GetAgentIdByListingId(ctx context.Context, listingId
 
 	var agentId int
 
-	if err := r.db.QueryRowContext(ctx, query, listingId).Scan(&agentId); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	if err := r.db.QueryRow(ctx, query, listingId).Scan(&agentId); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, errors.New("Listing not found or you do not have permission")
 		}
 		return 0, err
@@ -341,7 +463,7 @@ func (r *ListingRepository) TrackViewsByListingId(
 		WHERE id = $1
 	`
 
-	_, err := r.db.ExecContext(ctx, query, listingId)
+	_, err := r.db.Exec(ctx, query, listingId)
 	if err != nil {
 		return err
 	}

@@ -2,9 +2,11 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"server/internal/domain"
 )
@@ -24,10 +26,10 @@ type IFavoriteRepo interface {
 }
 
 type FavoriteRepo struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewFavoriteRepo(db *sql.DB) *FavoriteRepo {
+func NewFavoriteRepo(db *pgxpool.Pool) *FavoriteRepo {
 	return &FavoriteRepo{db: db}
 }
 
@@ -42,7 +44,7 @@ func (r *FavoriteRepo) GetUserFavorites(
 
 	var favorites []*domain.Favorite
 
-	rows, err := r.db.QueryContext(ctx, query, userCtx.UserID)
+	rows, err := r.db.Query(ctx, query, userCtx.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +87,10 @@ func (r *FavoriteRepo) CreateFavorite(
 	`
 
 	newFavorite := *favorite
-	err := r.db.QueryRowContext(ctx, query, favorite.UserID, favorite.ListingID).
+	err := r.db.QueryRow(ctx, query, favorite.UserID, favorite.ListingID).
 		Scan(&newFavorite.ID, &newFavorite.CreatedAt, &newFavorite.UpdatedAt)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return nil, errors.New("Favorite already exists")
 	}
 
@@ -113,15 +115,12 @@ func (r *FavoriteRepo) DeleteFavoriteByListingId(
 		)
 	`
 
-	result, err := r.db.ExecContext(ctx, query, listingId, userCtx.UserID, userCtx.Role)
+	result, err := r.db.Exec(ctx, query, listingId, userCtx.UserID, userCtx.Role)
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
+	rows := result.RowsAffected()
 
 	if rows < 1 {
 		return errors.New("Cannot delete other favorites")
@@ -141,7 +140,7 @@ func (r *FavoriteRepo) GetAllUserIdsByListingId(
 
 	userIds := make(map[int]bool)
 
-	rows, err := r.db.QueryContext(ctx, query, listingId)
+	rows, err := r.db.Query(ctx, query, listingId)
 	if err != nil {
 		return nil, err
 	}

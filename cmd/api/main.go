@@ -11,6 +11,7 @@ import (
 
 	"server/database"
 	"server/internal/api/handler"
+	"server/internal/cloudinary"
 	"server/internal/logger"
 	"server/internal/repo"
 	"server/internal/server"
@@ -56,16 +57,19 @@ func main() {
 	client := session.GetClient()
 	session := session.NewSession(client)
 
+	// Initialize Cloudinary client
+	cld := cloudinary.Init()
+
 	// Setup repositories
-	userRepo := repo.NewUserRepository(dbService.DB())
-	listingRepo := repo.NewListingRepository(dbService.DB())
-	favoriteRepo := repo.NewFavoriteRepo(dbService.DB())
-	notificationRepo := repo.NewNotificationRepository(dbService.DB())
+	userRepo := repo.NewUserRepository(dbService.Pool())
+	listingRepo := repo.NewListingRepository(dbService.Pool())
+	favoriteRepo := repo.NewFavoriteRepo(dbService.Pool())
+	notificationRepo := repo.NewNotificationRepository(dbService.Pool())
 
 	// Setup services
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(userRepo, session)
-	listingService := service.NewListingService(listingRepo)
+	listingService := service.NewListingService(listingRepo, cld)
 	favoriteService := service.NewFavoriteService(favoriteRepo)
 	notificationService := service.NewNotificationService(
 		notificationRepo,

@@ -10,6 +10,8 @@ build:
 	
 	@go build -o bin/main cmd/api/main.go
 
+	@echo "Build complete!"
+
 # Run the application
 run:
 	@go run cmd/api/main.go
@@ -74,5 +76,9 @@ dev:
                 exit 1; \
             fi; \
         fi
+
+update:
+	@echo "Updating project packages"
+	@go get -u ./...
 
 .PHONY: all build run test clean watch docker-run docker-down itest

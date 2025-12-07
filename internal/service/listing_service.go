@@ -3,18 +3,26 @@ package service
 import (
 	"context"
 	"errors"
+	"mime/multipart"
+
+	"golang.org/x/sync/errgroup"
 
 	"server/internal/api/dto"
+	"server/internal/cloudinary"
 	"server/internal/domain"
 	listingRepo "server/internal/repo"
 )
 
 type ListingService struct {
 	listingRepo listingRepo.IListingRepo
+	cld         *cloudinary.CloudinaryClient
 }
 
-func NewListingService(listingRepo listingRepo.IListingRepo) *ListingService {
-	return &ListingService{listingRepo: listingRepo}
+func NewListingService(
+	listingRepo listingRepo.IListingRepo,
+	cld *cloudinary.CloudinaryClient,
+) *ListingService {
+	return &ListingService{listingRepo: listingRepo, cld: cld}
 }
 
 func (s *ListingService) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
@@ -52,8 +60,70 @@ func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Li
 
 func (s *ListingService) CreateListing(
 	ctx context.Context,
+	multiPartForm *multipart.Form,
 	listing *domain.Listing,
 ) (*domain.Listing, error) {
+	files := multiPartForm.File["images"]
+
+	type uploadResult struct {
+		index int
+		image domain.ListingImage
+		err   error
+	}
+
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(5)
+
+	results := make(chan uploadResult, len(files))
+
+	for i, fh := range files {
+		g.Go(func() error {
+			file, err := fh.Open()
+			if err != nil {
+				return err
+			}
+
+			result, err := s.cld.Upload(gCtx, file, listing.ID)
+			file.Close()
+
+			if err != nil {
+				results <- uploadResult{index: i, image: domain.ListingImage{}, err: err}
+				return err
+			}
+
+			image := domain.ListingImage{
+				PublicID:  result.PublicID,
+				ListingID: listing.ID,
+				URL:       result.URL,
+				SortOrder: i,
+				IsPrimary: i == 0,
+			}
+
+			results <- uploadResult{index: i, image: image, err: nil}
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		close(results)
+		return nil, err
+	}
+	close(results)
+
+	sortedResults := make([]uploadResult, len(files))
+
+	for res := range results {
+		sortedResults[res.index] = res
+	}
+
+	for _, res := range sortedResults {
+		if res.err != nil {
+			return nil, res.err
+		}
+
+		listing.Images = append(listing.Images, res.image)
+	}
+
 	return s.listingRepo.CreateListing(ctx, listing)
 }
 

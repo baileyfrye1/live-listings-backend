@@ -2,7 +2,8 @@ package repo
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"server/internal/domain"
 )
@@ -20,10 +21,10 @@ type INotificationRepo interface {
 }
 
 type NotificationRepository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewNotificationRepository(db *sql.DB) *NotificationRepository {
+func NewNotificationRepository(db *pgxpool.Pool) *NotificationRepository {
 	return &NotificationRepository{
 		db: db,
 	}
@@ -40,7 +41,7 @@ func (r *NotificationRepository) GetAllNotificationsByUserId(
 
 	var notifications []*domain.Notification
 
-	rows, err := r.db.QueryContext(ctx, query, userId)
+	rows, err := r.db.Query(ctx, query, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (r *NotificationRepository) CreateNotification(
 
 	newNotification := *notification
 
-	err := r.db.QueryRowContext(
+	err := r.db.QueryRow(
 		ctx,
 		query,
 		notification.UserID,
@@ -112,7 +113,7 @@ func (r *NotificationRepository) ToggleNotificationReadStatus(
 
 	var updatedNotification domain.Notification
 
-	err := r.db.QueryRowContext(
+	err := r.db.QueryRow(
 		ctx,
 		query,
 		id,

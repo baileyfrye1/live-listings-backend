@@ -182,7 +182,14 @@ func (r *ListingRepository) CreateListing(
 	ctx context.Context,
 	listing *domain.Listing,
 ) (*domain.Listing, error) {
-	query := `
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Create listing SQL query
+	listingQuery := `
 		WITH new_listing AS (
 			INSERT INTO listings (address, price, beds, baths, sq_ft, agent_id)
 			VALUES ($1, $2, $3, $4, $5, $6)
@@ -197,7 +204,7 @@ func (r *ListingRepository) CreateListing(
 	newListing := *listing
 	newListing.Agent = new(domain.Agent)
 
-	err := r.db.QueryRowContext(ctx, query, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
+	err = tx.QueryRowContext(ctx, listingQuery, listing.Address, listing.Price, listing.Beds, listing.Baths, listing.SqFt, listing.AgentID).
 		Scan(
 			&newListing.ID,
 			&newListing.CreatedAt,
@@ -209,6 +216,34 @@ func (r *ListingRepository) CreateListing(
 			&newListing.Agent.Email,
 		)
 	if err != nil {
+		return nil, err
+	}
+
+	imageQuery := `
+		INSERT INTO listing_images (public_id, listing_id, url, is_primary, sort_order)	
+		VALUES($1, $2, $3, $4, $5)
+		RETURNING id, public_id, listing_id, url, is_primary, sort_order, created_at, updated_at
+	`
+
+	// TODO: Convert this to bulk insert
+	for _, image := range listing.Images {
+		err = tx.QueryRowContext(ctx, imageQuery, image.PublicID, newListing.ID, image.URL, image.IsPrimary, image.SortOrder).
+			Scan(
+				&newListing.Images[image.SortOrder].ID,
+				&newListing.Images[image.SortOrder].PublicID,
+				&newListing.Images[image.SortOrder].ListingID,
+				&newListing.Images[image.SortOrder].URL,
+				&newListing.Images[image.SortOrder].IsPrimary,
+				&newListing.Images[image.SortOrder].SortOrder,
+				&newListing.Images[image.SortOrder].CreatedAt,
+				&newListing.Images[image.SortOrder].UpdatedAt,
+			)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 

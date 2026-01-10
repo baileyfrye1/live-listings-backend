@@ -3,18 +3,24 @@ package service
 import (
 	"context"
 	"errors"
+	"mime/multipart"
 
 	"server/internal/api/dto"
+	"server/internal/cloudinary"
 	"server/internal/domain"
 	listingRepo "server/internal/repo"
 )
 
 type ListingService struct {
 	listingRepo listingRepo.IListingRepo
+	cld         *cloudinary.CloudinaryClient
 }
 
-func NewListingService(listingRepo listingRepo.IListingRepo) *ListingService {
-	return &ListingService{listingRepo: listingRepo}
+func NewListingService(
+	listingRepo listingRepo.IListingRepo,
+	cld *cloudinary.CloudinaryClient,
+) *ListingService {
+	return &ListingService{listingRepo: listingRepo, cld: cld}
 }
 
 func (s *ListingService) GetAllListings(ctx context.Context) ([]*domain.Listing, error) {
@@ -52,8 +58,34 @@ func (s *ListingService) GetListingById(ctx context.Context, id int) (*domain.Li
 
 func (s *ListingService) CreateListing(
 	ctx context.Context,
+	multiPartForm *multipart.Form,
 	listing *domain.Listing,
 ) (*domain.Listing, error) {
+	files := multiPartForm.File["images"]
+
+	// TODO: Convert this to go routine
+	for i, fh := range files {
+		file, err := fh.Open()
+		if err != nil {
+			return nil, err
+		}
+
+		result, err := s.cld.Upload(ctx, file, listing.ID)
+		file.Close()
+
+		if err != nil {
+			return nil, err
+		}
+
+		listing.Images = append(listing.Images, domain.ListingImage{
+			PublicID:  result.PublicID,
+			ListingID: listing.ID,
+			URL:       result.URL,
+			SortOrder: i,
+			IsPrimary: i == 0,
+		})
+	}
+
 	return s.listingRepo.CreateListing(ctx, listing)
 }
 

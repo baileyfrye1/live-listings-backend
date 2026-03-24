@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -38,8 +39,48 @@ func (r *FavoriteRepo) GetUserFavorites(
 	userCtx *domain.ContextSessionData,
 ) ([]*domain.Favorite, error) {
 	query := `
-		SELECT * FROM favorites
-		WHERE user_id = $1
+		SELECT
+			f.id,
+			f.user_id,
+			f.listing_id,
+			f.created_at,
+			f.updated_at,
+			l.id,
+			l.address,
+			l.price,
+			l.beds,
+			l.baths,
+			l.sq_ft,
+			l.description,
+			l.agent_id,
+			l.created_at,
+			l.updated_at,
+			l.views,
+			u.id AS agent_id,
+			u.first_name,
+			u.last_name,
+			u.email,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', li.id,
+						'public_id', li.public_id,
+						'listing_id', li.listing_id,
+						'url', li.url,
+						'sort_order', li.sort_order,
+						'is_primary', li.is_primary,
+						'created_at', li.created_at,
+						'updated_at', li.updated_at
+					) ORDER BY li.sort_order ASC
+				) FILTER (WHERE li.id IS NOT NULL),
+				'[]'
+			) AS images
+		FROM favorites f
+		INNER JOIN listings l ON l.id = f.listing_id
+		INNER JOIN users u ON l.agent_id = u.id
+		LEFT JOIN listing_images li ON l.id = li.listing_id
+		WHERE f.user_id = $1
+		GROUP BY f.id, l.id, u.id, u.first_name, u.last_name, u.email
 	`
 
 	var favorites []*domain.Favorite
@@ -53,6 +94,9 @@ func (r *FavoriteRepo) GetUserFavorites(
 
 	for rows.Next() {
 		favorite := new(domain.Favorite)
+		listing := new(domain.Listing)
+		listing.Agent = new(domain.Agent)
+		var imagesJson []byte
 
 		err := rows.Scan(
 			&favorite.ID,
@@ -60,10 +104,32 @@ func (r *FavoriteRepo) GetUserFavorites(
 			&favorite.ListingID,
 			&favorite.CreatedAt,
 			&favorite.UpdatedAt,
+			&listing.ID,
+			&listing.Address,
+			&listing.Price,
+			&listing.Beds,
+			&listing.Baths,
+			&listing.SqFt,
+			&listing.Description,
+			&listing.AgentID,
+			&listing.CreatedAt,
+			&listing.UpdatedAt,
+			&listing.Views,
+			&listing.Agent.ID,
+			&listing.Agent.FirstName,
+			&listing.Agent.LastName,
+			&listing.Agent.Email,
+			&imagesJson,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		if err = json.Unmarshal(imagesJson, &listing.Images); err != nil {
+			return nil, err
+		}
+
+		favorite.Listing = listing
 
 		favorites = append(favorites, favorite)
 	}

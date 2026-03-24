@@ -17,7 +17,7 @@ type IUserRepo interface {
 	GetUserById(ctx context.Context, id int) (*domain.User, error)
 	GetAgentById(ctx context.Context, id int) (*domain.Agent, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
-	GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error)
+	GetUsersByRole(ctx context.Context, role string) ([]*domain.Agent, error)
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUserById(
 		ctx context.Context,
@@ -154,9 +154,9 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	return &user, nil
 }
 
-func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*domain.User, error) {
+func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*domain.Agent, error) {
 	query := `
-		SELECT id, first_name, last_name, email, created_at, updated_at, role
+		SELECT id, first_name, last_name, email, created_at, updated_at
 		FROM users
 		WHERE role = $1
 	`
@@ -168,31 +168,30 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 
 	defer rows.Close()
 
-	var users []*domain.User
+	var agents []*domain.Agent
 	for rows.Next() {
-		user := new(domain.User)
+		agent := new(domain.Agent)
 
 		err := rows.Scan(
-			&user.ID,
-			&user.FirstName,
-			&user.LastName,
-			&user.Email,
-			&user.CreatedAt,
-			&user.UpdatedAt,
-			&user.Role,
+			&agent.ID,
+			&agent.FirstName,
+			&agent.LastName,
+			&agent.Email,
+			&agent.CreatedAt,
+			&agent.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		users = append(users, user)
+		agents = append(agents, agent)
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return users, nil
+	return agents, nil
 }
 
 func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {

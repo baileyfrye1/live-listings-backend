@@ -30,7 +30,7 @@ func NewListingHandler(
 func (h *ListingHandler) GetAllListings(w http.ResponseWriter, r *http.Request) {
 	listings, err := h.listingService.GetAllListings(r.Context())
 	if err != nil {
-		util.RespondWithError(w, http.StatusBadRequest, err.Error())
+		util.RespondWithError(w, http.StatusBadRequest, "Error fetching listings")
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *ListingHandler) GetAgentListings(w http.ResponseWriter, r *http.Request
 
 	listings, err := h.listingService.GetListingsByAgentId(r.Context(), agentId)
 	if err != nil {
-		util.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		util.RespondWithError(w, http.StatusInternalServerError, "Agent listing could not be found")
 		return
 	}
 

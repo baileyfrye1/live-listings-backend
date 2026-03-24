@@ -73,7 +73,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	util.WriteJSON(w, http.StatusOK, map[string]string{"message": "Successfully logged in"})
+	util.WriteJSON(w, http.StatusOK, user)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

@@ -118,7 +118,11 @@ func (h *UserHandler) UpdateUserById(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			targetId = parsedId
 		} else {
-			util.RespondWithError(w, http.StatusBadRequest, "Incorrect ID provided. Please provide a valid ID")
+			util.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"Incorrect ID provided. Please provide a valid ID",
+			)
 			return
 		}
 	}

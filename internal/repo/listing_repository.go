@@ -120,7 +120,7 @@ func (r *ListingRepository) GetAllListings(ctx context.Context) ([]*domain.Listi
 
 func (r *ListingRepository) GetListingById(ctx context.Context, id int) (*domain.Listing, error) {
 	query := `
-		SELECT listings.*,
+		SELECT l.*,
 			users.id AS agent_id,
 			users.first_name,
 			users.last_name,

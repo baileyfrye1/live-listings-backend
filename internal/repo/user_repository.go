@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,7 +18,7 @@ type IUserRepo interface {
 	GetUserById(ctx context.Context, id int) (*domain.User, error)
 	GetAgentById(ctx context.Context, id int) (*domain.Agent, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
-	GetUsersByRole(ctx context.Context, role string) ([]*domain.Agent, error)
+	GetAllAgents(ctx context.Context) ([]*domain.Agent, error)
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpdateUserById(
 		ctx context.Context,
@@ -154,14 +155,14 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	return &user, nil
 }
 
-func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*domain.Agent, error) {
+func (r *UserRepository) GetAllAgents(ctx context.Context) ([]*domain.Agent, error) {
 	query := `
-		SELECT id, first_name, last_name, email, created_at, updated_at
-		FROM users
-		WHERE role = $1
-	`
+        SELECT id, first_name, last_name, email, created_at, updated_at
+        FROM users
+        WHERE role = 'agent'
+    `
 
-	rows, err := r.db.Query(ctx, query, role)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +190,76 @@ func (r *UserRepository) GetUsersByRole(ctx context.Context, role string) ([]*do
 
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	listingsQuery := `
+        SELECT l.*,
+        COALESCE(
+            json_agg(
+                json_build_object(
+                    'id', li.id,
+                    'public_id', li.public_id,
+                    'listing_id', li.listing_id,
+                    'url', li.url,
+                    'sort_order', li.sort_order,
+                    'is_primary', li.is_primary,
+                    'created_at', li.created_at,
+                    'updated_at', li.updated_at
+                ) ORDER BY li.sort_order ASC
+            ) FILTER (WHERE li.id IS NOT NULL),
+            '[]'
+        ) AS images
+        FROM listings l
+        LEFT JOIN listing_images li
+            ON l.id = li.listing_id
+        WHERE l.agent_id = $1
+        GROUP BY l.id
+    `
+
+	for _, agent := range agents {
+		listingRows, err := r.db.Query(ctx, listingsQuery, agent.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		var listings []domain.Listing
+		var imagesJson []byte
+		for listingRows.Next() {
+			listing := domain.Listing{}
+			err := listingRows.Scan(
+				&listing.ID,
+				&listing.Address,
+				&listing.Price,
+				&listing.Beds,
+				&listing.Baths,
+				&listing.SqFt,
+				&listing.Description,
+				&listing.AgentID,
+				&listing.CreatedAt,
+				&listing.UpdatedAt,
+				&listing.Views,
+				&imagesJson,
+			)
+			if err != nil {
+				listingRows.Close()
+				return nil, err
+			}
+
+			if err = json.Unmarshal(imagesJson, &listing.Images); err != nil {
+				listingRows.Close()
+				return nil, err
+			}
+
+			listings = append(listings, listing)
+		}
+
+		if err = listingRows.Err(); err != nil {
+			listingRows.Close()
+			return nil, err
+		}
+
+		listingRows.Close()
+		agent.Listings = listings
 	}
 
 	return agents, nil

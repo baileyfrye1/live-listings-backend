@@ -40,8 +40,8 @@ func (s *UserService) GetAgentById(ctx context.Context, id int) (*domain.Agent, 
 	return s.userRepo.GetAgentById(ctx, id)
 }
 
-func (s *UserService) GetUsersByRole(ctx context.Context, role string) ([]*domain.Agent, error) {
-	return s.userRepo.GetUsersByRole(ctx, role)
+func (s *UserService) GetAllAgents(ctx context.Context) ([]*domain.Agent, error) {
+	return s.userRepo.GetAllAgents(ctx)
 }
 
 func (s *UserService) UpdateUserById(

@@ -187,6 +187,10 @@ func (r *ListingRepository) GetListingsByAgentId(
 ) ([]*domain.Listing, error) {
 	query := `
 		SELECT l.*,
+			u.id AS agent_id,
+			u.first_name,
+			u.last_name,
+			u.email,
 		COALESCE(
 			json_agg(
 				json_build_object(
@@ -203,10 +207,12 @@ func (r *ListingRepository) GetListingsByAgentId(
 			'[]'
 		) AS images
 		FROM listings l
+		INNER JOIN users u
+			on l.agent_id = u.id
 		LEFT JOIN listing_images li 
 			ON l.id = li.listing_id
 		WHERE agent_id = $1
-		GROUP BY l.id
+		GROUP BY l.id, u.id, u.first_name, u.last_name, u.email;
 	`
 	rows, err := r.db.Query(ctx, query, agentId)
 	if err != nil {
@@ -219,6 +225,7 @@ func (r *ListingRepository) GetListingsByAgentId(
 	var imagesJson []byte
 	for rows.Next() {
 		listing := new(domain.Listing)
+		listing.Agent = new(domain.Agent)
 
 		err := rows.Scan(
 			&listing.ID,
@@ -232,6 +239,10 @@ func (r *ListingRepository) GetListingsByAgentId(
 			&listing.CreatedAt,
 			&listing.UpdatedAt,
 			&listing.Views,
+			&listing.Agent.ID,
+			&listing.Agent.FirstName,
+			&listing.Agent.LastName,
+			&listing.Agent.Email,
 			&imagesJson,
 		)
 		if err != nil {

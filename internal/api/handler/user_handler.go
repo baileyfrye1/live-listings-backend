@@ -47,7 +47,7 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
-	agents, err := h.userService.GetUsersByRole(r.Context(), "agent")
+	agents, err := h.userService.GetAllAgents(r.Context())
 	if err != nil {
 		util.RespondWithError(w, http.StatusBadRequest, "Could not find agents")
 		return
